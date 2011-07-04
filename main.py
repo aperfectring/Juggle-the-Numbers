@@ -142,6 +142,7 @@ class Base:
 		self.window.show_all()
 		return
 
+	### Determine the League Unique database ID based on the currently selected league from the combobox
 	def get_league_id(self):
 		model = self.league_combo.get_model()
 		index = self.league_combo.get_active()
@@ -151,7 +152,8 @@ class Base:
 				return row[0]
 			else:
 				return None
-	
+
+	### Determine the Season Unique database ID based on the currently selected season from the combobox	
 	def get_season_id(self):
 		model = self.season_combo.get_model()
 		index = self.season_combo.get_active()
@@ -159,17 +161,20 @@ class Base:
 		season_start = None
 		season_end = None
 
+		### Since seasons are named based on start-end, the names are only unique within a season
+		###   so we need to limit our search within the currently selected season.
 		league_id = self.get_league_id()
 
+		### Figure out the starting and ending year of the season
 		if(season_text != ''):
 			seasons = re.split('-', season_text)
 			season_start = seasons[0]
 			if(len(seasons) > 1):
 				season_end = seasons[1]
-		
 		if(season_end == None):
 			season_end = season_start
 
+		### Query the database to get the ID
 		if(season_start != None):
 			self.cur.execute("SELECT id FROM seasons WHERE STRFTIME('%Y',end) = '" + season_end + "' AND STRFTIME('%Y',start) = '" + season_start + "' AND league = '" + str(league_id) + "'")
 		else:
@@ -181,13 +186,19 @@ class Base:
 			else:
 				return None
 
+	### Callback handler for when the season combobox changes
+	###   Updates the season notebook page
 	def season_combo_changed(self, combobox):
+		### We will get this callback when we are deleting all entries in the season combobox, so we
+		###   only want to actually try to update the notebook page if we are changing to a valid
+		###   index
 		index = self.season_combo.get_active()
 		if(index < 0):
-			# We are deleting all of the entries, ignore this
 			return
+
 		season_id = self.get_season_id()
-		
+
+		### Decode the starting year month and day from the season entry in the database		
 		self.cur.execute("SELECT STRFTIME('%Y',start), STRFTIME('%m',start), STRFTIME('%d',start) FROM seasons WHERE id = '" + str(season_id) + "'")
 		for row in self.cur:
 			if row != None:
@@ -199,6 +210,7 @@ class Base:
 			if(day != None):
 				self.season_start_cal.select_day(int(day))
 
+		### Decode the ending year month and day from the season entry in the database		
 		self.cur.execute("SELECT STRFTIME('%Y',end), STRFTIME('%m',end), STRFTIME('%d',end) FROM seasons WHERE id = '" + str(season_id) + "'")
 		for row in self.cur:
 			if row != None:
@@ -210,12 +222,18 @@ class Base:
 			if(day != None):
 				self.season_end_cal.select_day(int(day))
 
+	### Callback for when the "Add season" button is clicked"
+	###    This will create a "blank" season, which has no start or end date
+	###    This will leavue the created season as the selected one
 	def season_button_clicked(self, button):
 		league_id = self.get_league_id()
 		self.cur.execute("INSERT INTO seasons (league) VALUES ('" + str(league_id) + "')")
 		self.db.commit()
 		self.repop_season_combo('')
 
+	### Callback for the "Update" button on the season notebook page
+	###    This writes the currently selected dates into the database, and updates the combobox with the
+	###    appropriate date range.
 	def season_update_clicked(self, button):
 		season_id = self.get_season_id()
 		start_date = self.season_start_cal.get_date()
@@ -230,14 +248,16 @@ class Base:
 		else:
 			model[index][0] = str(start_date[0]) + "-" + str(end_date[0])
 
-
+	### Callback for when the league combobox is changed
+	###    Updates the league notebook page.
+	###    Also deletes all entries from the season combobox, then adds the appropriate ones for this league
 	def league_combo_changed(self, combobox):
 		model = combobox.get_model()
 		index = combobox.get_active()
-		print "Using", model[index][0]
 		self.league_name_entry.set_text(model[index][0])
 		self.league_country_oldname.set_label(model[index][0])
 
+		### Fetches all the league information from the database
 		self.cur.execute("SELECT country, confederation, level FROM leagues WHERE league_name = '" + model[index][0] + "'")
 		self.league_country_entry.set_text("")
 		self.league_confed_entry.set_text("")
@@ -251,9 +271,12 @@ class Base:
 				if row[2] != None:
 					self.league_level_entry.set_text(str(row[2]))
 
+		### Delete all season combobox entries, then populate the combobox with appropriate ones for this league
 		self.repop_season_combo()
 		return
 
+	### Deletes all season combobox entries, then repopulates the combobox with appriopriate ones for this season
+	###   Will attempt to select an entry which has the value of select_val, if specified
 	def repop_season_combo(self, select_val = None):
 		league_id = self.get_league_id()
 		model = self.season_combo.get_model()
@@ -279,6 +302,9 @@ class Base:
 			self.season_combo.set_active(0)
 		return						
 
+	### Callback for the "Update" button on the league notebook page
+	###    Commits all data from the league notebook page to the database
+	###    Updates the league combobox string to reflect any changes made
 	def league_update_clicked(self, button):
 		self.cur.execute("UPDATE leagues SET country = '" + self.league_country_entry.get_text() + "', league_name = '" + self.league_name_entry.get_text() + "', confederation = '" + self.league_confed_entry.get_text() + "', level = '" + self.league_level_entry.get_text() + "' WHERE league_name = '" + self.league_country_oldname.get_label() + "'")
 		self.db.commit()
@@ -288,6 +314,9 @@ class Base:
 		model[index][0] = self.league_name_entry.get_text()
 		
 
+	### Callback for the "Add league" button
+	###    This will create a "blank" league
+	###    This will leave the newly created league as the currently selected one
 	def league_button_clicked(self, button):
 		text = ""
 		try:
@@ -302,14 +331,10 @@ class Base:
 				self.league_combo.set_active(index)
 
 		self.db.commit()
-		self.cur.execute("SELECT * FROM leagues")
-                for row in self.cur:
-			print row
 
 	def main(self):
 		gtk.main()
 
-print __name__
 if __name__ == "__main__":
 	base = Base()
 	base.main()
