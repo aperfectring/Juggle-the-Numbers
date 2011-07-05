@@ -10,9 +10,17 @@ class Base:
 	def __init__(self):
 		self.db = sqlite3.connect("test.sqlite")
 		self.cur = self.db.cursor()
-		self.cur.execute("CREATE TABLE IF NOT EXISTS leagues (league_name STRING UNIQUE, id INTEGER PRIMARY KEY ASC, country STRING, confederation STRING, level INTEGER)")
-		self.cur.execute("CREATE TABLE IF NOT EXISTS seasons (start DATE, end DATE, id INTEGER PRIMARY KEY ASC, league INTEGER)")
-		#self.cur.execute("INSERT INTO seasons (start, end, league) VALUES (DATE('2010-10-01'), DATE('2011-04-01'), 1)")
+		self.cur.execute("CREATE TABLE IF NOT EXISTS leagues (" +
+                                    "league_name STRING UNIQUE, " +
+                                    "id INTEGER PRIMARY KEY ASC, " + 
+                                    "country STRING, " + 
+                                    "confederation STRING, " + 
+                                    "level INTEGER)")
+		self.cur.execute("CREATE TABLE IF NOT EXISTS seasons (" + 
+                                    "start DATE, " + 
+                                    "end DATE, " + 
+                                    "id INTEGER PRIMARY KEY ASC, " + 
+                                    "league INTEGER)")
 
 		self.window = gtk.Window(gtk.WINDOW_TOPLEVEL)
 		self.window.connect('destroy', lambda w: gtk.main_quit())
@@ -58,6 +66,18 @@ class Base:
 
 		self.notebook = gtk.Notebook()
 		self.window_vbox.add(self.notebook)
+
+		self.team_vbox = gtk.VBox(spacing=5)
+		self.combo_hbox.add(self.team_vbox)
+
+		self.team_label = gtk.Label("Team:")
+		self.team_vbox.add(self.team_label)
+
+		self.team_combo = gtk.combo_box_new_text()
+		self.team_vbox.add(self.team_combo)
+
+		self.team_button = gtk.Button("Add Team")
+		self.team_vbox.add(self.team_button)
 
 		#########  League Notebook Page  #########
 		self.league_note_vbox = gtk.VBox(spacing=10)
@@ -107,7 +127,7 @@ class Base:
 		self.league_level_hbox.add(self.league_level_entry)
 
 		self.league_note_update = gtk.Button("Update")
-		self.league_note_vbox.pack_start(self.league_note_update, expand=False)
+		self.league_note_vbox.pack_end(self.league_note_update, expand=False)
 		self.league_note_update.connect('clicked', self.league_update_clicked)
 		
 		#########  Season Notebook Page  #########
@@ -138,6 +158,34 @@ class Base:
 		self.season_note_update = gtk.Button("Update")
 		self.season_note_vbox.pack_start(self.season_note_update, expand=False)
 		self.season_note_update.connect('clicked', self.season_update_clicked)
+
+		########### Team Notebook Page #############
+		self.team_note_vbox = gtk.VBox(spacing=10)
+		self.team_note_vbox.set_border_width(5)
+		self.notebook.append_page(self.team_note_vbox, gtk.Label("Team"))
+
+		self.team_name_hbox = gtk.HBox(spacing=10)
+		self.team_name_hbox.set_border_width(5)
+		self.team_note_vbox.pack_start(self.team_name_hbox, expand=False)
+
+		self.team_name_label = gtk.Label("Name:")
+		self.team_name_hbox.add(self.team_name_label)
+
+		self.team_name_combo_entry = gtk.ComboBoxEntry()
+		self.team_name_hbox.add(self.team_name_combo_entry)
+
+		self.team_city_hbox = gtk.HBox(spacing=10)
+		self.team_city_hbox.set_border_width(5)
+		self.team_note_vbox.pack_start(self.team_city_hbox, expand=False)
+
+		self.team_city_label = gtk.Label("City:")
+		self.team_city_hbox.add(self.team_city_label)
+
+		self.team_city_entry = gtk.Entry()
+		self.team_city_hbox.add(self.team_city_entry)
+
+		self.team_note_update = gtk.Button("Update")
+		self.team_note_vbox.pack_end(self.team_note_update, expand=False)
 
 		self.window.show_all()
 		return
@@ -176,7 +224,10 @@ class Base:
 
 		### Query the database to get the ID
 		if(season_start != None):
-			self.cur.execute("SELECT id FROM seasons WHERE STRFTIME('%Y',end) = '" + season_end + "' AND STRFTIME('%Y',start) = '" + season_start + "' AND league = '" + str(league_id) + "'")
+			self.cur.execute("SELECT id FROM seasons " + 
+                                            "WHERE STRFTIME('%Y',end) = '" + season_end + "' " + 
+                                            "AND STRFTIME('%Y',start) = '" + season_start + "' " + 
+                                            "AND league = '" + str(league_id) + "'")
 		else:
 			self.cur.execute("SELECT id FROM seasons WHERE end IS NULL AND start IS NULL")
 
@@ -199,7 +250,8 @@ class Base:
 		season_id = self.get_season_id()
 
 		### Decode the starting year month and day from the season entry in the database		
-		self.cur.execute("SELECT STRFTIME('%Y',start), STRFTIME('%m',start), STRFTIME('%d',start) FROM seasons WHERE id = '" + str(season_id) + "'")
+		self.cur.execute("SELECT STRFTIME('%Y',start), STRFTIME('%m',start), STRFTIME('%d',start) " + 
+                                    "FROM seasons WHERE id = '" + str(season_id) + "'")
 		for row in self.cur:
 			if row != None:
 				year = row[0]
@@ -211,7 +263,8 @@ class Base:
 				self.season_start_cal.select_day(int(day))
 
 		### Decode the ending year month and day from the season entry in the database		
-		self.cur.execute("SELECT STRFTIME('%Y',end), STRFTIME('%m',end), STRFTIME('%d',end) FROM seasons WHERE id = '" + str(season_id) + "'")
+		self.cur.execute("SELECT STRFTIME('%Y',end), STRFTIME('%m',end), STRFTIME('%d',end) " + 
+                                    "FROM seasons WHERE id = '" + str(season_id) + "'")
 		for row in self.cur:
 			if row != None:
 				year = row[0]
@@ -238,7 +291,16 @@ class Base:
 		season_id = self.get_season_id()
 		start_date = self.season_start_cal.get_date()
 		end_date = self.season_end_cal.get_date()
-		self.cur.execute("UPDATE seasons SET start = DATE('" + str(start_date[0]) + "-" + str(start_date[1]+1).zfill(2) + "-" + str(start_date[2]).zfill(2) + "'), end = DATE('"+ str(end_date[0]) + "-" + str(end_date[1]+1).zfill(2) + "-" + str(end_date[2]).zfill(2) + "') WHERE id = '" + str(season_id) + "'")
+		self.cur.execute("UPDATE seasons SET " + 
+                                    "start = DATE('" + 
+                                       str(start_date[0]) + "-" + 
+                                       str(start_date[1]+1).zfill(2) + "-" + 
+                                       str(start_date[2]).zfill(2) + "'), " + 
+                                    "end = DATE('" + 
+                                       str(end_date[0]) + "-" + 
+                                       str(end_date[1]+1).zfill(2) + "-" + 
+                                       str(end_date[2]).zfill(2) + "') " + 
+                                    "WHERE id = '" + str(season_id) + "'")
 		self.db.commit()
 
 		model = self.season_combo.get_model()
@@ -258,7 +320,8 @@ class Base:
 		self.league_country_oldname.set_label(model[index][0])
 
 		### Fetches all the league information from the database
-		self.cur.execute("SELECT country, confederation, level FROM leagues WHERE league_name = '" + model[index][0] + "'")
+		self.cur.execute("SELECT country, confederation, level " + 
+                                    "FROM leagues WHERE league_name = '" + model[index][0] + "'")
 		self.league_country_entry.set_text("")
 		self.league_confed_entry.set_text("")
 		self.league_level_entry.set_text("")
@@ -283,7 +346,10 @@ class Base:
 		for index in range(0, len(model)):
 			self.season_combo.remove_text(0)
 
-		self.cur.execute("SELECT STRFTIME('%Y', start), STRFTIME('%Y', end) FROM seasons WHERE league = '" + str(league_id) + "' ORDER BY end DESC")
+		self.cur.execute("SELECT STRFTIME('%Y', start), STRFTIME('%Y', end) " + 
+                                    "FROM seasons " + 
+                                    "WHERE league = '" + str(league_id) + "' " + 
+                                    "ORDER BY end DESC")
 		for row in self.cur:
 			if row != None and row[0] != None and row[1] != None:
 				if row[0] == row[1]:
@@ -306,7 +372,12 @@ class Base:
 	###    Commits all data from the league notebook page to the database
 	###    Updates the league combobox string to reflect any changes made
 	def league_update_clicked(self, button):
-		self.cur.execute("UPDATE leagues SET country = '" + self.league_country_entry.get_text() + "', league_name = '" + self.league_name_entry.get_text() + "', confederation = '" + self.league_confed_entry.get_text() + "', level = '" + self.league_level_entry.get_text() + "' WHERE league_name = '" + self.league_country_oldname.get_label() + "'")
+		self.cur.execute("UPDATE leagues " + 
+                                    "SET country = '" + self.league_country_entry.get_text() + "', " + 
+                                       "league_name = '" + self.league_name_entry.get_text() + "', " + 
+                                       "confederation = '" + self.league_confed_entry.get_text() + "', " + 
+                                       "level = '" + self.league_level_entry.get_text() + "' " + 
+                                    "WHERE league_name = '" + self.league_country_oldname.get_label() + "'")
 		self.db.commit()
 
 		index = self.league_combo.get_active()
