@@ -5,6 +5,26 @@ import gobject
 import sqlite3
 import re
 import traceback
+import datetime
+
+def get_team_from_name(cur, name):
+	cur.execute("SELECT city, id FROM teams WHERE team_name = '" + name + "'")
+	city = None
+	myid = None
+	for row in cur:
+		if row:
+			city = row[0]
+			myid = row[1]
+	return (name, city, myid)
+
+style_text_array = [
+		"Standard format",
+		"AET and PKs format",
+		"Golden goal AET format",
+		"Home+Away Game 1 format",
+		"Home+Away Game 2 format"
+		]
+
 
 class League_Combo:
 	def __init__(self, parent):
@@ -28,15 +48,17 @@ class League_Combo:
 	def update(self, combobox):
 		model = combobox.get_model()
 		index = combobox.get_active()
-		name = combobox.get_model()[combobox.get_active()][0]
 
-		### Fetches all the league information from the database
-		self.parent.cur.execute("SELECT country, confederation, level " + 
-                                           "FROM leagues WHERE league_name = '" + model[index][0] + "'")
+		if index >= 0:
+			name = model[index][0]
 
-		for row in self.parent.cur:
-			if row:
-				self.parent.league_note.set(name = name, country = row[0], confed = row[1], level = row[2])
+			### Fetches all the league information from the database
+			self.parent.cur.execute("SELECT country, confederation, level " + 
+        	                                   "FROM leagues WHERE league_name = '" + name + "'")
+
+			for row in self.parent.cur:
+				if row:
+					self.parent.league_note.set(name = name, country = row[0], confed = row[1], level = row[2])
 
 
 		### Delete all season combobox entries, then populate the combobox with appropriate ones for this league
@@ -65,6 +87,8 @@ class League_Combo:
 	def get_id(self):
 		model = self.combo.get_model()
 		index = self.combo.get_active()
+		if (index < 0):
+			return None
 		self.parent.cur.execute("SELECT id FROM leagues WHERE league_name = '" + model[index][0] + "'")
 		for row in self.parent.cur:
 			if row != None and row[0] != None:
@@ -234,6 +258,8 @@ class Season_Combo:
 	def get_id(self):
 		model = self.combo.get_model()
 		index = self.combo.get_active()
+		if index < 0:
+			return None
 		season_text = model[index][0]
 		season_start = None
 		season_end = None
@@ -419,6 +445,7 @@ class Teams_Notebook:
 
 		self.team_del_button = gtk.Button("Delete team")
 		self.teamops_hbox.add(self.team_del_button)
+		# self.team_del_button.connect('clicked', self.delete_team)
 
 		self.repop()
 
@@ -452,7 +479,6 @@ class Teams_Notebook:
 				else:
 					all_list.append([row[0]])
 
-
 	def get_team(self, view):
 		all_list = view.get_model()
 		if view.get_cursor()[0]:
@@ -460,12 +486,8 @@ class Teams_Notebook:
 			name = all_list.get_value(itera, 0)
 			myid = None
 			city = ""
-			self.parent.cur.execute("SELECT city, id FROM teams WHERE team_name = '" + name + "'")
-			for row in self.parent.cur:
-				if row:
-					city = row[0]
-					myid = row[1]
-		return (name, city, myid)
+			return get_team_from_name(self.parent.cur, name)
+		return (None, None, None)
 
 	def add_team(self, button):
 		(name, city, myid) = self.get_team(self.all_view)
@@ -540,6 +562,415 @@ class Teams_Notebook:
 
 		dialog.destroy()
 
+class Games_Notebook:
+	def __init__(self, parent):
+		self.parent = parent
+
+		self.list_hbox = gtk.HBox(spacing=10)
+		self.list_hbox.set_border_width(5)
+		self.parent.games_note_vbox.pack_start(self.list_hbox)
+
+		scrolled_window = gtk.ScrolledWindow()
+		scrolled_window.set_policy(gtk.POLICY_NEVER, gtk.POLICY_AUTOMATIC)
+		self.list_hbox.pack_start(scrolled_window)
+
+		list_store = gtk.ListStore(gobject.TYPE_STRING,		# Date
+						gobject.TYPE_STRING,	# Home
+						gobject.TYPE_STRING,	# Home goals
+						gobject.TYPE_STRING,	# Home PKs
+						gobject.TYPE_STRING,	# Away
+						gobject.TYPE_STRING,	# Away goals
+						gobject.TYPE_STRING,	# Away PKs
+						gobject.TYPE_STRING,	# AET
+						gobject.TYPE_STRING,	# PKs
+						gobject.TYPE_STRING,	# Style
+						gobject.TYPE_STRING)	# Played
+
+		self.all_view = gtk.TreeView()
+		scrolled_window.add(self.all_view)
+		self.all_view.set_model(list_store)
+
+		column = gtk.TreeViewColumn("Date", gtk.CellRendererText(), text=0)
+		self.all_view.append_column(column)
+
+		column = gtk.TreeViewColumn("Home", gtk.CellRendererText(), text=1)
+		self.all_view.append_column(column)
+
+		column = gtk.TreeViewColumn("Home Goals", gtk.CellRendererText(), text=2)
+		self.all_view.append_column(column)
+
+		column = gtk.TreeViewColumn("Home PK Goals", gtk.CellRendererText(), text=3)
+		self.all_view.append_column(column)
+
+		column = gtk.TreeViewColumn("Away", gtk.CellRendererText(), text=4)
+		self.all_view.append_column(column)
+
+		column = gtk.TreeViewColumn("Away Goals", gtk.CellRendererText(), text=5)
+		self.all_view.append_column(column)
+
+		column = gtk.TreeViewColumn("Away PK Goals", gtk.CellRendererText(), text=6)
+		self.all_view.append_column(column)
+
+		column = gtk.TreeViewColumn("AET", gtk.CellRendererText(), text=7)
+		self.all_view.append_column(column)
+
+		column = gtk.TreeViewColumn("PKs", gtk.CellRendererText(), text=8)
+		self.all_view.append_column(column)
+
+		column = gtk.TreeViewColumn("Style", gtk.CellRendererText(), text=9)
+		self.all_view.append_column(column)
+
+		column = gtk.TreeViewColumn("Played", gtk.CellRendererText(), text=10)
+		self.all_view.append_column(column)
+
+		self.gameops_hbox = gtk.HBox(spacing=10)
+		self.gameops_hbox.set_border_width(5)
+		self.parent.games_note_vbox.pack_end(self.gameops_hbox, expand=False)
+		
+		self.game_add_button = gtk.Button("Add game")
+		self.gameops_hbox.add(self.game_add_button)
+		self.game_add_button.connect('clicked', self.edit_game)
+
+		self.game_edit_button = gtk.Button("Edit game")
+		self.gameops_hbox.add(self.game_edit_button)
+		self.game_edit_button.connect('clicked', self.edit_game)
+
+		self.game_del_button = gtk.Button("Delete game")
+		self.gameops_hbox.add(self.game_del_button)
+
+		self.repop()
+
+#		self.city_hbox = gtk.HBox(spacing=10)
+#		self.city_hbox.set_border_width(5)
+#		self.parent.teams_note_vbox.pack_start(self.city_hbox, expand=False)
+
+#		self.city_label = gtk.Label("City:")
+#		self.city_hbox.add(self.city_label)
+
+#		self.city_entry = gtk.Entry()
+#		self.city_hbox.add(self.city_entry)
+
+#		self.update_button = gtk.Button("Update")
+#		self.parent.teams_note_vbox.pack_end(self.update_button, expand=False)
+
+	def repop(self):
+		sid = self.parent.season_combo.get_id()
+		all_list = self.all_view.get_model()
+
+		all_list.clear()
+		self.parent.cur.execute("SELECT date, " + 
+						"home_id, home_goals, home_pks, " + 
+						"away_id, away_goals, away_pks, " +
+						"aet, pks, game_style, played " +
+					"FROM games WHERE (season_id='" + str(sid) + "')")
+		for row in self.parent.cur.fetchall():
+			print row
+
+			self.parent.cur.execute("SELECT team_name FROM teams WHERE (id='" + str(row[1]) + "')")
+			for team_names in self.parent.cur.fetchall():
+				home_text = team_names[0]
+
+			self.parent.cur.execute("SELECT team_name FROM teams WHERE (id='" + str(row[4]) + "')")
+			for team_names in self.parent.cur.fetchall():
+				away_text = team_names[0]
+
+			all_list.append( (row[0], home_text, row[2], row[3], away_text, row[5], row[6], row[7], row[8], style_text_array[row[9]], row[10]) )
+
+
+	def get_game(self, view):
+		all_list = view.get_model()
+		if view.get_cursor()[0]:
+			itera = all_list.iter_nth_child(None, view.get_cursor()[0][0])
+			date = all_list.get_value(itera, 0)
+			home = all_list.get_value(itera, 1)
+			home_goals = all_list.get_value(itera, 2)
+			home_pks = all_list.get_value(itera, 3)
+			away = all_list.get_value(itera, 4)
+			away_goals = all_list.get_value(itera, 5)
+			away_pks = all_list.get_value(itera, 6)
+			aet = all_list.get_value(itera, 7)
+			pks = all_list.get_value(itera, 8)
+			style = all_list.get_value(itera, 9)
+			played = all_list.get_value(itera, 10)
+		else:
+			date = None
+			home = None
+			home_goals = None
+			home_pks = None
+			away = None
+			away_goals = None
+			away_pks = None
+			aet = None
+			pks = None
+			style = None
+			played = None
+		return (date,	home, home_goals, home_pks,
+				away, away_goals, away_pks,
+				aet, pks, style, played)
+
+	def pop_team_combo(self, combo):
+		row = None
+		self.parent.cur.execute("SELECT team_id FROM team_season WHERE (season_id='" + str(self.parent.season_combo.get_id()) + "')")
+		for row in self.parent.cur.fetchall():
+			self.parent.cur.execute("SELECT team_name FROM teams WHERE (id='" + str(row[0]) + "')")
+			for name in self.parent.cur.fetchall():
+				combo.append_text(name[0])
+		if row:
+			combo.set_active(0)
+
+	def edit_game(self, button):
+		if button.get_label() == "Edit game":
+			edit = True
+		else:
+			edit = False
+
+		all_list = self.all_view.get_model()
+		if edit == True:
+			(date,
+				home, home_goals, home_pks,
+				away, away_goals, away_pks,
+				aet, pks, style, played) = self.get_game(self.all_view)
+			if date == None:
+				edit = False
+
+
+		dialog = gtk.Dialog("Edit Game",
+				    self.parent.window,
+				    gtk.DIALOG_MODAL | gtk.DIALOG_DESTROY_WITH_PARENT,
+				    (gtk.STOCK_CANCEL, gtk.RESPONSE_REJECT,
+				     gtk.STOCK_OK, gtk.RESPONSE_ACCEPT))
+
+
+		########## DATE ###########
+		date_vbox = gtk.VBox(spacing=10)
+		date_vbox.set_border_width(5)
+		date_vbox.show()
+		dialog.vbox.pack_start(date_vbox)
+		date_label = gtk.Label("Date:")
+		date_label.show()
+		date_vbox.pack_start(date_label)
+		date_cal = gtk.Calendar()
+		date_cal.show()
+		date_vbox.add(date_cal)
+
+
+		######### HOME TEAM STUFF #############
+		home_hbox = gtk.HBox(spacing=10)
+		home_hbox.set_border_width(5)
+		home_hbox.show()
+		dialog.vbox.pack_start(home_hbox)
+
+		home_label = gtk.Label("Home team:")
+		home_label.show()
+		home_hbox.pack_start(home_label)
+		home_combo = gtk.combo_box_new_text()
+		home_combo.show()
+		self.pop_team_combo(home_combo)
+		home_hbox.add(home_combo)
+
+		homegoals_label = gtk.Label("Home goals:")
+		homegoals_label.show()
+		home_hbox.pack_start(homegoals_label)
+		homegoals_spin = gtk.SpinButton()
+		homegoals_spin.set_range(0,100)
+		homegoals_spin.set_increments(1,1)
+		homegoals_spin.show()
+		home_hbox.pack_start(homegoals_spin)
+		
+		homepks_label = gtk.Label("Home PK goals:")
+		homepks_label.show()
+		home_hbox.pack_start(homepks_label)
+		homepks_spin = gtk.SpinButton()
+		homepks_spin.set_range(0,100)
+		homepks_spin.set_increments(1,1)
+		homepks_spin.show()
+		home_hbox.pack_start(homepks_spin)
+
+
+		######### AWAY TEAM STUFF #############
+		away_hbox = gtk.HBox(spacing=10)
+		away_hbox.set_border_width(5)
+		away_hbox.show()
+		dialog.vbox.pack_start(away_hbox)
+
+		away_label = gtk.Label("Away team:")
+		away_label.show()
+		away_hbox.pack_start(away_label)
+		away_combo = gtk.combo_box_new_text()
+		away_combo.show()
+		self.pop_team_combo(away_combo)
+		away_hbox.add(away_combo)
+
+		awaygoals_label = gtk.Label("Away goals:")
+		awaygoals_label.show()
+		away_hbox.pack_start(awaygoals_label)
+		awaygoals_spin = gtk.SpinButton()
+		awaygoals_spin.set_range(0,100)
+		awaygoals_spin.set_increments(1,1)
+		awaygoals_spin.show()
+		away_hbox.pack_start(awaygoals_spin)
+		
+		awaypks_label = gtk.Label("Away PK goals:")
+		awaypks_label.show()
+		away_hbox.pack_start(awaypks_label)
+		awaypks_spin = gtk.SpinButton()
+		awaypks_spin.set_range(0,100)
+		awaypks_spin.set_increments(1,1)
+		awaypks_spin.show()
+		away_hbox.pack_start(awaypks_spin)
+
+
+		############# Extra Time Stuff ###############
+		et_hbox = gtk.HBox(spacing=10)
+		et_hbox.set_border_width(5)
+		et_hbox.show()
+		dialog.vbox.pack_start(et_hbox)
+
+		played_check = gtk.CheckButton("Game has been played")
+		played_check.show()
+		et_hbox.pack_start(played_check)
+
+		aet_check = gtk.CheckButton("Went to AET")
+		aet_check.show()
+		et_hbox.pack_start(aet_check)
+
+		pk_check = gtk.CheckButton("Went to PKs")
+		pk_check.show()
+		et_hbox.pack_start(pk_check)
+
+		style_combo = gtk.combo_box_new_text()
+		for this_text in style_text_array:
+			style_combo.append_text(this_text)
+		style_combo.set_active(0)
+		style_combo.show()
+		et_hbox.pack_start(style_combo)
+
+
+		season_id_text = str(self.parent.season_combo.get_id())
+
+		###### Populate the widgets with the retrieved data
+		if edit == True:
+			datetime_obj = datetime.datetime.strptime(date, "%Y-%m-%d")
+			date_cal.select_month(datetime_obj.month - 1, datetime_obj.year)
+			date_cal.select_day(datetime_obj.day)
+			model = home_combo.get_model()
+			for index in range(0,len(model)):
+				if model[index][0] == home:
+					home_combo.set_active(index)
+			homegoals_spin.set_value(int(home_goals))
+			homepks_spin.set_value(int(home_pks))
+
+			model = away_combo.get_model()
+			for index in range(0,len(model)):
+				if model[index][0] == away:
+					away_combo.set_active(index)
+			awaygoals_spin.set_value(int(away_goals))
+			awaypks_spin.set_value(int(away_pks))
+
+			aet_check.set_active(True if (aet == "TRUE") else False)
+			pk_check.set_active(True if (pks == "TRUE") else False)
+			played_check.set_active(True if (played == "TRUE") else False)
+			model = style_combo.get_model()
+			for index in range(0,len(model)):
+				if model[index][0] == style:
+					style_combo.set_active(index)
+		else:
+			## Get the latest date of a game in the list
+			self.parent.cur.execute("SELECT date FROM games WHERE season_id = '" + season_id_text + "' ORDER BY date DESC")
+			start_date = self.parent.cur.fetchone()[0]
+			datetime_obj = datetime.datetime.strptime(start_date, "%Y-%m-%d")
+			date_cal.select_month(datetime_obj.month - 1, datetime_obj.year)
+			date_cal.select_day(datetime_obj.day)
+
+
+		response = dialog.run()
+		if response == gtk.RESPONSE_ACCEPT:
+			newdate = date_cal.get_date()
+			date_text = str(newdate[0]) + "-" + str(newdate[1]+1).zfill(2) + "-" + str(newdate[2]).zfill(2)
+			model = home_combo.get_model()
+			index = home_combo.get_active()
+			home_text = model[index][0]
+			home_goals_text = str(homegoals_spin.get_value_as_int())
+			home_pks_text = str(homepks_spin.get_value_as_int())
+			model = away_combo.get_model()
+			index = away_combo.get_active()
+			away_text = model[index][0]
+			away_goals_text = str(awaygoals_spin.get_value_as_int())
+			away_pks_text = str(awaypks_spin.get_value_as_int())
+			aet_text = "TRUE" if (aet_check.get_active() == True) else "FALSE"
+			pks_text = "TRUE" if (pk_check.get_active() == True) else "FALSE"
+			played_text = "TRUE" if (played_check.get_active() == True) else "FALSE"
+			model = style_combo.get_model()
+			index = style_combo.get_active()
+			style_text = model[index][0]
+			style_num_text = str(index)
+
+			(home_text, home_city_text, home_id) = get_team_from_name(self.parent.cur, home_text)
+			(away_text, away_city_text, away_id) = get_team_from_name(self.parent.cur, away_text)
+			home_id_text = str(home_id)
+			away_id_text = str(away_id)
+
+
+			if home_text != away_text:
+				if edit == True:
+					(home, orig_home_city_text, orig_home_id) = get_team_from_name(self.parent.cur, home)
+					(away, orig_away_city_text, orig_away_id) = get_team_from_name(self.parent.cur, away)
+					orig_home_id_text = str(orig_home_id)
+					orig_away_id_text = str(orig_away_id)
+					self.parent.cur.execute("UPDATE games SET " +
+									"date = '"       + date_text       + "', " +
+									"home_id = '"    + home_id_text    + "', " +
+									"home_goals = '" + home_goals_text + "', " +
+									"home_pks = '"   + home_pks_text   + "', " +
+									"away_id = '"    + away_id_text    + "', " +
+									"away_goals = '" + away_goals_text + "', " +
+									"away_pks = '"   + away_pks_text   + "', " +
+									"aet = '"        + aet_text        + "', " +
+									"pks = '"        + pks_text        + "', " +
+									"game_style = '" + style_num_text  + "' "  +
+									"played = '"     + played_text     + "' "  +
+								"WHERE (season_id = '" + season_id_text + "' AND " +
+									"home_id = '" + orig_home_id_text + "' AND " +
+									"away_id = '" + orig_away_id_text + "' AND " +
+									"date = '"    + date + "')")
+				else:
+					self.parent.cur.execute("INSERT INTO games (season_id, date, " + 
+											"home_id, home_goals, home_pks, " + 
+											"away_id, away_goals, away_pks, " +
+											"aet, pks, game_style, played) " +
+										"VALUES (" +
+											"'" + season_id_text  + "', " +
+											"'" + date_text       + "', " +
+											"'" + home_id_text    + "', " +
+											"'" + home_goals_text + "', " +
+											"'" + home_pks_text   + "', " +
+											"'" + away_id_text    + "', " +
+											"'" + away_goals_text + "', " +
+											"'" + away_pks_text   + "', " +
+											"'" + aet_text        + "', " +
+											"'" + pks_text        + "', " +
+											"'" + style_num_text  + "', " +
+											"'" + played_text     + "')")
+										
+
+				self.parent.db.commit()
+				self.repop()
+
+		#	if name_entry.get_text() != "":
+		#		if edit == True:
+		#			self.parent.cur.execute("UPDATE teams " + 
+		#			                           "SET team_name = '" + name_entry.get_text() + "', " + 
+		#			                              "city = '" + city_entry.get_text() + "' " + 
+		#			                           "WHERE team_name = '" + name + "'")
+		#		else:
+		#			self.parent.cur.execute("INSERT INTO teams (team_name, city) " + 
+		#			                           "VALUES ('" + name_entry.get_text() + "', '" +
+		#			                              city_entry.get_text() + "')")
+
+
+		dialog.destroy()
+
+
 class Base:
 	def __init__(self):
 		self.db = sqlite3.connect("test.sqlite")
@@ -562,6 +993,20 @@ class Base:
 		self.cur.execute("CREATE TABLE IF NOT EXISTS team_season (" +
 		                    "team_id INTEGER, " +
 		                    "season_id INTEGER)")
+		self.cur.execute("CREATE TABLE IF NOT EXISTS games (" +
+				    "season_id INTEGER, " +
+				    "date DATE, " +
+				    "home_id INTEGER, " +
+				    "home_goals INTEGER, " +
+				    "home_pks INTEGER, " +
+				    "away_id INTEGER, " +
+				    "away_goals INTEGER, " +
+				    "away_pks INTEGER, " +
+				    "aet BOOL, " +
+				    "pks BOOL, " +
+				    "played BOOL, " +
+				    "game_style INTEGER, " +
+				    "id INTEGER PRIMARY KEY ASC)")
 
 		self.window = gtk.Window(gtk.WINDOW_TOPLEVEL)
 		self.window.connect('destroy', lambda w: gtk.main_quit())
@@ -604,6 +1049,12 @@ class Base:
 		self.notebook.append_page(self.teams_note_vbox, gtk.Label("Teams"))
 
 		self.teams_note = Teams_Notebook(self)
+
+		self.games_note_vbox = gtk.VBox(spacing=10)
+		self.games_note_vbox.set_border_width(5)
+		self.notebook.append_page(self.games_note_vbox, gtk.Label("Games"))
+
+		self.games_note = Games_Notebook(self)
 
 		#### Update the combo boxes so the notebooks show the right data ####
 		self.league_combo.update(self.league_combo.combo)
