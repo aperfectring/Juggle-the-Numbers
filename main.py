@@ -6,6 +6,7 @@ import sqlite3
 import re
 import traceback
 import datetime
+import math
 
 def get_team_from_name(cur, name):
 	cur.execute("SELECT city, id FROM teams WHERE team_name = '" + name + "'")
@@ -24,6 +25,15 @@ style_text_array = [
 		"Home+Away Game 1 format",
 		"Home+Away Game 2 format"
 		]
+
+def poisson_cdf(k, lamb):
+	pois_sum = 0
+	for i in range(0,k+1):
+		pois_sum += poisson_pmf(i, lamb)
+	return pois_sum
+
+def poisson_pmf(k, lamb):
+	return math.pow(lamb, k) / math.factorial(k) * math.exp(-lamb)
 
 
 class League_Combo:
@@ -244,6 +254,7 @@ class Season_Combo:
 				self.parent.season_note.set_end(year = row[0], month = row[1], day = row[2])
 
 		self.parent.teams_note.repop()
+		self.parent.games_note.repop()
 
 	### Callback for when the "Add season" button is clicked"
 	###    This will create a "blank" season, which has no start or end date
@@ -591,36 +602,47 @@ class Games_Notebook:
 		self.all_view.set_model(list_store)
 
 		column = gtk.TreeViewColumn("Date", gtk.CellRendererText(), text=0)
+		column.set_sort_column_id(0)
 		self.all_view.append_column(column)
 
 		column = gtk.TreeViewColumn("Home", gtk.CellRendererText(), text=1)
+		column.set_sort_column_id(1)
 		self.all_view.append_column(column)
 
 		column = gtk.TreeViewColumn("Home Goals", gtk.CellRendererText(), text=2)
+		column.set_sort_column_id(2)
 		self.all_view.append_column(column)
 
 		column = gtk.TreeViewColumn("Home PK Goals", gtk.CellRendererText(), text=3)
+		column.set_sort_column_id(3)
 		self.all_view.append_column(column)
 
 		column = gtk.TreeViewColumn("Away", gtk.CellRendererText(), text=4)
+		column.set_sort_column_id(4)
 		self.all_view.append_column(column)
 
 		column = gtk.TreeViewColumn("Away Goals", gtk.CellRendererText(), text=5)
+		column.set_sort_column_id(5)
 		self.all_view.append_column(column)
 
 		column = gtk.TreeViewColumn("Away PK Goals", gtk.CellRendererText(), text=6)
+		column.set_sort_column_id(6)
 		self.all_view.append_column(column)
 
 		column = gtk.TreeViewColumn("AET", gtk.CellRendererText(), text=7)
+		column.set_sort_column_id(7)
 		self.all_view.append_column(column)
 
 		column = gtk.TreeViewColumn("PKs", gtk.CellRendererText(), text=8)
+		column.set_sort_column_id(8)
 		self.all_view.append_column(column)
 
 		column = gtk.TreeViewColumn("Style", gtk.CellRendererText(), text=9)
+		column.set_sort_column_id(9)
 		self.all_view.append_column(column)
 
 		column = gtk.TreeViewColumn("Played", gtk.CellRendererText(), text=10)
+		column.set_sort_column_id(10)
 		self.all_view.append_column(column)
 
 		self.gameops_hbox = gtk.HBox(spacing=10)
@@ -664,8 +686,6 @@ class Games_Notebook:
 						"aet, pks, game_style, played " +
 					"FROM games WHERE (season_id='" + str(sid) + "')")
 		for row in self.parent.cur.fetchall():
-			print row
-
 			self.parent.cur.execute("SELECT team_name FROM teams WHERE (id='" + str(row[1]) + "')")
 			for team_names in self.parent.cur.fetchall():
 				home_text = team_names[0]
@@ -676,6 +696,8 @@ class Games_Notebook:
 
 			all_list.append( (row[0], home_text, row[2], row[3], away_text, row[5], row[6], row[7], row[8], style_text_array[row[9]], row[10]) )
 
+		self.parent.table_note.repop()
+		self.parent.model_note.repop()
 
 	def get_game(self, view):
 		all_list = view.get_model()
@@ -927,7 +949,7 @@ class Games_Notebook:
 									"away_pks = '"   + away_pks_text   + "', " +
 									"aet = '"        + aet_text        + "', " +
 									"pks = '"        + pks_text        + "', " +
-									"game_style = '" + style_num_text  + "' "  +
+									"game_style = '" + style_num_text  + "', "  +
 									"played = '"     + played_text     + "' "  +
 								"WHERE (season_id = '" + season_id_text + "' AND " +
 									"home_id = '" + orig_home_id_text + "' AND " +
@@ -970,6 +992,324 @@ class Games_Notebook:
 
 		dialog.destroy()
 
+
+class Table_Notebook:
+	def __init__(self, parent):
+		self.parent = parent
+
+		self.list_hbox = gtk.HBox(spacing=10)
+		self.list_hbox.set_border_width(5)
+		self.parent.table_note_vbox.pack_start(self.list_hbox)
+
+		scrolled_window = gtk.ScrolledWindow()
+		scrolled_window.set_policy(gtk.POLICY_NEVER, gtk.POLICY_NEVER)
+		self.list_hbox.pack_start(scrolled_window)
+
+		list_store = gtk.ListStore(gobject.TYPE_STRING,		# Team
+						gobject.TYPE_INT,	# GP
+						gobject.TYPE_INT,	# W
+						gobject.TYPE_INT,	# L
+						gobject.TYPE_INT,	# D
+						gobject.TYPE_INT,	# GF
+						gobject.TYPE_INT,	# GA
+						gobject.TYPE_INT,	# GD
+						gobject.TYPE_FLOAT,	# GF:GA
+						gobject.TYPE_INT)	# Pts
+
+		self.all_view = gtk.TreeView()
+		scrolled_window.add(self.all_view)
+		self.all_view.set_model(list_store)
+
+		column = gtk.TreeViewColumn("Team", gtk.CellRendererText(), text=0)
+		column.set_sort_column_id(0)
+		self.all_view.append_column(column)
+
+		column = gtk.TreeViewColumn("GP", gtk.CellRendererText(), text=1)
+		column.set_sort_column_id(1)
+		self.all_view.append_column(column)
+
+		column = gtk.TreeViewColumn("W", gtk.CellRendererText(), text=2)
+		column.set_sort_column_id(2)
+		self.all_view.append_column(column)
+
+		column = gtk.TreeViewColumn("L", gtk.CellRendererText(), text=3)
+		column.set_sort_column_id(3)
+		self.all_view.append_column(column)
+
+		column = gtk.TreeViewColumn("D", gtk.CellRendererText(), text=4)
+		column.set_sort_column_id(4)
+		self.all_view.append_column(column)
+
+		column = gtk.TreeViewColumn("GF", gtk.CellRendererText(), text=5)
+		column.set_sort_column_id(5)
+		self.all_view.append_column(column)
+
+		column = gtk.TreeViewColumn("GA", gtk.CellRendererText(), text=6)
+		column.set_sort_column_id(6)
+		self.all_view.append_column(column)
+
+		column = gtk.TreeViewColumn("GD", gtk.CellRendererText(), text=7)
+		column.set_sort_column_id(7)
+		self.all_view.append_column(column)
+
+		column = gtk.TreeViewColumn("GF:GA", gtk.CellRendererText(), text=8)
+		column.set_sort_column_id(8)
+		self.all_view.append_column(column)
+
+		column = gtk.TreeViewColumn("Pts", gtk.CellRendererText(), text=9)
+		column.set_sort_column_id(9)
+		self.all_view.append_column(column)
+
+		self.repop()
+
+	def repop(self):
+		season_id = self.parent.season_combo.get_id()
+
+		all_list = self.all_view.get_model()
+		all_list.clear()
+
+		self.parent.cur.execute("SELECT team_id FROM team_season WHERE season_id = '" + str(season_id) + "'")
+		for row in self.parent.cur.fetchall():
+			team_id = row[0]
+			self.parent.cur.execute("SELECT team_name FROM teams WHERE id = '" + str(row[0]) + "'")
+			team_name = self.parent.cur.fetchone()[0]
+
+			games_played = self.fetch_gp(team_id)
+			goals_scored = self.fetch_gf(team_id)
+			goals_against = self.fetch_ga(team_id)
+			num_tied = self.fetch_ties(team_id)
+			num_won = self.fetch_wins(team_id)
+			num_lost = self.fetch_loss(team_id)
+
+			goal_ratio = 100 if goals_against == 0 else (float(goals_scored) / float(goals_against))
+
+			all_list.append( (team_name, games_played, num_won, num_lost, num_tied, goals_scored, goals_against, goals_scored - goals_against, goal_ratio, 3*num_won + num_tied) )
+
+	def fetch_gp(self, team, date = None):
+		if date == None:
+			date_today = datetime.date.today()
+			date = date_today.isoformat()
+		season_id = self.parent.season_combo.get_id()
+		self.parent.cur.execute("SELECT COUNT(*) FROM games WHERE (season_id = '" + str(season_id) + "' AND played = 'TRUE' AND date <= '" + date + "' AND (home_id = '" + str(team) + "' OR away_id = '" + str(team) + "'))")
+		games_played = self.parent.cur.fetchone()[0]
+		return games_played
+
+	def fetch_ties(self, team, date = None):
+		if date == None:
+			date_today = datetime.date.today()
+			date = date_today.isoformat()
+		season_id = self.parent.season_combo.get_id()
+		self.parent.cur.execute("SELECT COUNT(*) FROM games WHERE (season_id = '" + str(season_id) + "' AND played = 'TRUE' AND date <= '" + date + "' AND (home_id = '" + str(team) + "' OR away_id = '" + str(team) + "') AND home_goals = away_goals)")
+		num_tied = self.parent.cur.fetchone()[0]
+		return num_tied
+
+	def fetch_wins(self, team, date = None):
+		if date == None:
+			date_today = datetime.date.today()
+			date = date_today.isoformat()
+		season_id = self.parent.season_combo.get_id()
+		self.parent.cur.execute("SELECT COUNT(*) FROM games WHERE (season_id = '" + str(season_id) + "' AND played = 'TRUE' AND date <= '" + date + "' AND ((home_id = '" + str(team) + "' AND home_goals > away_goals) OR (away_id = '" + str(team) + "') AND home_goals < away_goals))")
+		num_won = self.parent.cur.fetchone()[0]
+		return num_won
+
+	def fetch_loss(self, team, date = None):
+		if date == None:
+			date_today = datetime.date.today()
+			date = date_today.isoformat()
+		season_id = self.parent.season_combo.get_id()
+		self.parent.cur.execute("SELECT COUNT(*) FROM games WHERE (season_id = '" + str(season_id) + "' AND played = 'TRUE' AND date <= '" + date + "' AND ((home_id = '" + str(team) + "' AND home_goals < away_goals) OR (away_id = '" + str(team) + "') AND home_goals > away_goals))")
+		num_lost = self.parent.cur.fetchone()[0]
+		return num_lost
+
+	def fetch_pts(self, team, date = None):
+		num_tied = self.fetch_ties(team, date)
+		num_won = self.fetch_wins(team, date)
+		return (3 * num_won + num_tied)
+
+	def fetch_gf(self, team, date = None):
+		if date == None:
+			date_today = datetime.date.today()
+			date = date_today.isoformat()
+		season_id = self.parent.season_combo.get_id()
+		goals_scored = 0
+		self.parent.cur.execute("SELECT SUM(home_goals) FROM games WHERE (season_id = '" + str(season_id) + "' AND played = 'TRUE' AND date <= '" + date + "' AND home_id = '" + str(team) + "')")
+		goal_row = self.parent.cur.fetchone()
+		if goal_row[0]:
+			goals_scored = goal_row[0]
+		self.parent.cur.execute("SELECT SUM(away_goals) FROM games WHERE (season_id = '" + str(season_id) + "' AND played = 'TRUE' AND date <= '" + date + "' AND away_id = '" + str(team) + "')")
+		goal_row = self.parent.cur.fetchone()
+		if goal_row[0]:
+			goals_scored += goal_row[0]
+		return goals_scored
+
+	def fetch_ga(self, team, date = None):
+		if date == None:
+			date_today = datetime.date.today()
+			date = date_today.isoformat()
+		season_id = self.parent.season_combo.get_id()
+		goals_against = 0
+		self.parent.cur.execute("SELECT SUM(away_goals) FROM games WHERE (season_id = '" + str(season_id) + "' AND played = 'TRUE' AND date <= '" + date + "' AND home_id = '" + str(team) + "')")
+		goal_row = self.parent.cur.fetchone()
+		if goal_row[0]:
+			goals_against = goal_row[0]
+		self.parent.cur.execute("SELECT SUM(home_goals) FROM games WHERE (season_id = '" + str(season_id) + "' AND played = 'TRUE' AND date <= '" + date + "' AND away_id = '" + str(team) + "')")
+		goal_row = self.parent.cur.fetchone()
+		if goal_row[0]:
+			goals_against += goal_row[0]
+		return goals_against
+
+	def fetch_home_goals(self, date = None):
+		if date == None:
+			date_today = datetime.date.today()
+			date = date_today.isoformat()
+		season_id = self.parent.season_combo.get_id()
+		self.parent.cur.execute("SELECT SUM(home_goals) FROM games WHERE (season_id = '" + str(season_id) + "' AND played = 'TRUE' AND date <= '" + date + "')")
+		goal_row = self.parent.cur.fetchone()
+		goals = 0
+		if goal_row[0]:
+			goals = goal_row[0]
+		return goals
+
+	def fetch_away_goals(self, date = None):
+		if date == None:
+			date_today = datetime.date.today()
+			date = date_today.isoformat()
+		season_id = self.parent.season_combo.get_id()
+		self.parent.cur.execute("SELECT SUM(away_goals) FROM games WHERE (season_id = '" + str(season_id) + "' AND played = 'TRUE' AND date <= '" + date + "')")
+		goal_row = self.parent.cur.fetchone()
+		goals = 0
+		if goal_row[0]:
+			goals = goal_row[0]
+		return goals
+
+class Model_Notebook:
+	def __init__(self, parent):
+		self.parent = parent
+		
+		self.list_hbox = gtk.HBox(spacing=10)
+		self.list_hbox.set_border_width(5)
+		self.parent.model_note_vbox.pack_start(self.list_hbox)
+
+		scrolled_window = gtk.ScrolledWindow()
+		scrolled_window.set_policy(gtk.POLICY_NEVER, gtk.POLICY_NEVER)
+		self.list_hbox.pack_start(scrolled_window)
+
+		list_store = gtk.ListStore(gobject.TYPE_STRING,		# Team
+						gobject.TYPE_FLOAT,	# Basic
+						gobject.TYPE_FLOAT)	# EAP
+
+		self.all_view = gtk.TreeView()
+		scrolled_window.add(self.all_view)
+		self.all_view.set_model(list_store)
+
+		column = gtk.TreeViewColumn("Team", gtk.CellRendererText(), text=0)
+		column.set_sort_column_id(0)
+		self.all_view.append_column(column)
+
+		column = gtk.TreeViewColumn("Basic", gtk.CellRendererText(), text=1)
+		column.set_sort_column_id(1)
+		self.all_view.append_column(column)
+
+		column = gtk.TreeViewColumn("EAP", gtk.CellRendererText(), text=2)
+		column.set_sort_column_id(2)
+		self.all_view.append_column(column)
+
+		self.repop()
+
+	def repop(self):
+		basic_pts = self.basic_model_calc()
+		eap_ppg = self.eap_model_calc()
+
+		season_id = self.parent.season_combo.get_id()
+		all_list = self.all_view.get_model()
+		all_list.clear()
+
+		self.parent.cur.execute("SELECT team_id FROM team_season WHERE season_id = '" + str(season_id) + "'")
+		for team in self.parent.cur.fetchall():
+			self.parent.cur.execute("SELECT team_name FROM teams WHERE id = '" + str(team[0]) + "'")
+			team_name = self.parent.cur.fetchone()[0]
+			all_list.append( (team_name, basic_pts[team[0]], eap_ppg[team[0]]) )
+
+
+	def win_chance_calc(self, team_goals_base, opp_goals_base, team_exp_gf, opp_exp_gf):
+		team_goals_adj = opp_goals_base - min(team_goals_base, opp_goals_base)
+		opp_goals_adj = team_goals_base - min(team_goals_base, opp_goals_base)
+
+		win_chance = 0.0
+		for i in range(0,opp_goals_adj):
+			win_chance += poisson_pmf(i, opp_exp_gf)
+
+		for i in range(0,100):
+			win_chance += poisson_pmf(i + opp_goals_adj, opp_exp_gf) * (1 - poisson_cdf(i + team_goals_adj, team_exp_gf))
+
+		return win_chance
+
+	def tie_chance_calc(self, team_goals_base, opp_goals_base, team_exp_gf, opp_exp_gf):
+		team_goals_adj = opp_goals_base - min(team_goals_base, opp_goals_base)
+		opp_goals_adj = team_goals_base - min(team_goals_base, opp_goals_base)
+
+		tie_chance = 0.0
+		for i in range(0,100):
+			tie_chance += poisson_pmf(i + team_goals_adj, team_exp_gf) * poisson_pmf(i + opp_goals_adj, opp_exp_gf)
+
+		return tie_chance
+
+	def basic_model_calc(self, date = None):
+		league_home_gf = self.parent.table_note.fetch_home_goals(date)
+		league_away_gf = self.parent.table_note.fetch_away_goals(date)
+
+		hfa_adj = math.sqrt(float(league_home_gf) / float(league_away_gf))
+
+		season_id = self.parent.season_combo.get_id()
+		if date == None:
+			date_today = datetime.date.today()
+			date = date_today.isoformat()
+
+		team_points = {}
+
+		self.parent.cur.execute("SELECT team_id FROM team_season WHERE season_id = '" + str(season_id) + "'")
+		for team in self.parent.cur.fetchall():
+			team_points[team[0]] = self.parent.table_note.fetch_pts(int(team[0]), date)
+
+		self.parent.cur.execute("SELECT home_id, away_id FROM games WHERE (season_id = '" + str(season_id) + "' AND (date > '" + date + "' OR played = 'FALSE'))")
+
+		game_arr = self.parent.cur.fetchall()
+		for game in game_arr:
+			home = game[0]
+			away = game[1]
+			print "On",game_arr.index(game),"of",len(game_arr)
+			home_exp_gf = float(self.parent.table_note.fetch_gf(home, date) + self.parent.table_note.fetch_ga(away, date)) /		\
+					float(self.parent.table_note.fetch_gp(home, date) + self.parent.table_note.fetch_gp(away, date)) * hfa_adj
+			away_exp_gf = float(self.parent.table_note.fetch_gf(away, date) + self.parent.table_note.fetch_ga(home, date)) / 		\
+					float(self.parent.table_note.fetch_gp(home, date) + self.parent.table_note.fetch_gp(away, date)) / hfa_adj
+
+			tie_chance = self.tie_chance_calc(0, 0, home_exp_gf, away_exp_gf)
+			home_win_chance = self.win_chance_calc(0, 0, home_exp_gf, away_exp_gf)
+			away_win_chance = self.win_chance_calc(0, 0, away_exp_gf, home_exp_gf)
+
+			team_points[home] += 3.0 * home_win_chance + tie_chance
+			team_points[away] += 3.0 * away_win_chance + tie_chance
+
+		return team_points
+
+	def eap_model_calc(self, date = None):
+		season_id = self.parent.season_combo.get_id()
+		if date == None:
+			date_today = datetime.date.today()
+			date = date_today.isoformat()
+
+		team_ppg = {}
+		self.parent.cur.execute("SELECT team_id FROM team_season WHERE season_id = '" + str(season_id) + "'")
+		for team in self.parent.cur.fetchall():
+			exp_gf = float(self.parent.table_note.fetch_gf(int(team[0]), date)) / float(self.parent.table_note.fetch_gp(int(team[0]), date))
+			exp_ga = float(self.parent.table_note.fetch_ga(int(team[0]), date)) / float(self.parent.table_note.fetch_gp(int(team[0]), date))
+
+			tie_chance = self.tie_chance_calc(0, 0, exp_gf, exp_ga)
+			win_chance = self.win_chance_calc(0, 0, exp_gf, exp_ga)
+
+			team_ppg[team[0]] = 3.0 * win_chance + tie_chance
+
+		return team_ppg
 
 class Base:
 	def __init__(self):
@@ -1053,6 +1393,18 @@ class Base:
 		self.games_note_vbox = gtk.VBox(spacing=10)
 		self.games_note_vbox.set_border_width(5)
 		self.notebook.append_page(self.games_note_vbox, gtk.Label("Games"))
+
+		self.table_note_vbox = gtk.VBox(spacing=10)
+		self.table_note_vbox.set_border_width(5)
+		self.notebook.append_page(self.table_note_vbox, gtk.Label("Table"))
+
+		self.model_note_vbox = gtk.VBox(spacing=10)
+		self.model_note_vbox.set_border_width(5)
+		self.notebook.append_page(self.model_note_vbox, gtk.Label("Model"))
+
+		self.table_note = Table_Notebook(self)
+
+		self.model_note = Model_Notebook(self)
 
 		self.games_note = Games_Notebook(self)
 
