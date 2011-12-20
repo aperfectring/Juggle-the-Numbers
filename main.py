@@ -7,6 +7,7 @@ import re
 import traceback
 import datetime
 import math
+import threading
 
 def get_team_from_name(cur, name):
 	cur.execute("SELECT city, id FROM teams WHERE team_name = '" + name + "'")
@@ -697,7 +698,7 @@ class Games_Notebook:
 			all_list.append( (row[0], home_text, row[2], row[3], away_text, row[5], row[6], row[7], row[8], style_text_array[row[9]], row[10]) )
 
 		self.parent.table_note.repop()
-		self.parent.model_note.repop()
+		self.parent.model_note.clear()
 
 	def get_game(self, view):
 		all_list = view.get_model()
@@ -899,11 +900,16 @@ class Games_Notebook:
 		else:
 			## Get the latest date of a game in the list
 			self.parent.cur.execute("SELECT date FROM games WHERE season_id = '" + season_id_text + "' ORDER BY date DESC")
-			start_date = self.parent.cur.fetchone()[0]
-			datetime_obj = datetime.datetime.strptime(start_date, "%Y-%m-%d")
-			date_cal.select_month(datetime_obj.month - 1, datetime_obj.year)
-			date_cal.select_day(datetime_obj.day)
-
+			this_val = self.parent.cur.fetchone()
+			if this_val != None:
+				start_date = this_val[0]
+				datetime_obj = datetime.datetime.strptime(start_date, "%Y-%m-%d")
+				date_cal.select_month(datetime_obj.month - 1, datetime_obj.year)
+				date_cal.select_day(datetime_obj.day)
+			else:
+				begin_date = self.parent.season_note.start_cal.get_date()
+				date_cal.select_month(begin_date[1], begin_date[0])
+				date_cal.select_day(begin_date[2])
 
 		response = dialog.run()
 		if response == gtk.RESPONSE_ACCEPT:
@@ -1214,21 +1220,53 @@ class Model_Notebook:
 		column.set_sort_column_id(2)
 		self.all_view.append_column(column)
 
-		self.repop()
+		self.parent.notebook.connect('switch-page', self.do_recalc)
+		self.calc_thread = None
+
+		self.calc_progress = gtk.ProgressBar()
+		self.parent.model_note_vbox.pack_start(self.calc_progress)
+
+	def clear(self):
+		self.all_view.get_model().clear()
+
+	def do_recalc(self, notebook, page_NOUSE, page_num):
+		if notebook.get_tab_label(notebook.get_nth_page(page_num)).get_text() == "Model":
+			if not self.calc_thread or not self.calc_thread.is_alive():
+				self.calc_thread = threading.Thread(target=self.repop)
+			if not self.calc_thread.is_alive():
+				self.calc_thread.start()
 
 	def repop(self):
-		basic_pts = self.basic_model_calc()
-		eap_ppg = self.eap_model_calc()
+		gtk.gdk.threads_enter()
+		self.calc_progress.set_fraction(0)
+		self.calc_progress.set_text("Calculating...")		
+		gtk.gdk.threads_leave()
+		basic_pts = self.basic_model_calc("2011-07-01")
+		eap_ppg = self.eap_model_calc("2011-07-01")
 
+#		basic_pts_new = self.basic_model_calc()
+
+#		summ = 0
+#		for key in basic_pts.keys():
+#			summ += math.pow(basic_pts[key] - basic_pts_new[key],2)
+#		print "Avg:",math.sqrt(summ/len(basic_pts))
+
+		gtk.gdk.threads_enter()
 		season_id = self.parent.season_combo.get_id()
 		all_list = self.all_view.get_model()
 		all_list.clear()
+		gtk.gdk.threads_leave()
 
 		self.parent.cur.execute("SELECT team_id FROM team_season WHERE season_id = '" + str(season_id) + "'")
+		gtk.gdk.threads_enter()
 		for team in self.parent.cur.fetchall():
 			self.parent.cur.execute("SELECT team_name FROM teams WHERE id = '" + str(team[0]) + "'")
 			team_name = self.parent.cur.fetchone()[0]
 			all_list.append( (team_name, basic_pts[team[0]], eap_ppg[team[0]]) )
+
+		self.calc_progress.set_fraction(1)
+		self.calc_progress.set_text("Calculation Complete")		
+		gtk.gdk.threads_leave()
 
 
 	def win_chance_calc(self, team_goals_base, opp_goals_base, team_exp_gf, opp_exp_gf):
@@ -1255,21 +1293,39 @@ class Model_Notebook:
 		return tie_chance
 
 	def basic_model_calc(self, date = None):
+		gtk.gdk.threads_enter()
 		league_home_gf = self.parent.table_note.fetch_home_goals(date)
 		league_away_gf = self.parent.table_note.fetch_away_goals(date)
+		gtk.gdk.threads_leave()
 
-		hfa_adj = math.sqrt(float(league_home_gf) / float(league_away_gf))
+		if(league_away_gf != 0):
+			hfa_adj = math.sqrt(float(league_home_gf) / float(league_away_gf))
+		else:
+			hfa_adj = 1.0
 
+		if(hfa_adj == 0):
+			hfa_adj = 0.01
+
+		gtk.gdk.threads_enter()
 		season_id = self.parent.season_combo.get_id()
 		if date == None:
 			date_today = datetime.date.today()
 			date = date_today.isoformat()
+		gtk.gdk.threads_leave()
 
 		team_points = {}
+		team_gf = {}
+		team_ga = {}
+		team_gp = {}
 
+		gtk.gdk.threads_enter()
 		self.parent.cur.execute("SELECT team_id FROM team_season WHERE season_id = '" + str(season_id) + "'")
 		for team in self.parent.cur.fetchall():
 			team_points[team[0]] = self.parent.table_note.fetch_pts(int(team[0]), date)
+			team_gf[team[0]] = float(self.parent.table_note.fetch_gf(int(team[0]), date))
+			team_ga[team[0]] = float(self.parent.table_note.fetch_ga(int(team[0]), date))
+			team_gp[team[0]] = float(self.parent.table_note.fetch_gp(int(team[0]), date))
+		gtk.gdk.threads_leave()
 
 		self.parent.cur.execute("SELECT home_id, away_id FROM games WHERE (season_id = '" + str(season_id) + "' AND (date > '" + date + "' OR played = 'FALSE'))")
 
@@ -1277,11 +1333,16 @@ class Model_Notebook:
 		for game in game_arr:
 			home = game[0]
 			away = game[1]
-			print "On",game_arr.index(game),"of",len(game_arr)
-			home_exp_gf = float(self.parent.table_note.fetch_gf(home, date) + self.parent.table_note.fetch_ga(away, date)) /		\
-					float(self.parent.table_note.fetch_gp(home, date) + self.parent.table_note.fetch_gp(away, date)) * hfa_adj
-			away_exp_gf = float(self.parent.table_note.fetch_gf(away, date) + self.parent.table_note.fetch_ga(home, date)) / 		\
-					float(self.parent.table_note.fetch_gp(home, date) + self.parent.table_note.fetch_gp(away, date)) / hfa_adj
+			gtk.gdk.threads_enter()
+			if(team_gp[home] == 0) or (team_gp[away] == 0):
+				home_exp_gf = 0.0
+				away_exp_gf = 0.0
+			else:
+				home_exp_gf = (team_gf[home] + team_ga[away]) /	(team_gp[home] + team_gp[away]) * hfa_adj
+				away_exp_gf = (team_gf[away] + team_ga[home]) /	(team_gp[home] + team_gp[away]) / hfa_adj
+
+			self.calc_progress.set_fraction(float(game_arr.index(game))/float(len(game_arr)))
+			gtk.gdk.threads_leave()
 
 			tie_chance = self.tie_chance_calc(0, 0, home_exp_gf, away_exp_gf)
 			home_win_chance = self.win_chance_calc(0, 0, home_exp_gf, away_exp_gf)
@@ -1293,7 +1354,9 @@ class Model_Notebook:
 		return team_points
 
 	def eap_model_calc(self, date = None):
+		gtk.gdk.threads_enter()
 		season_id = self.parent.season_combo.get_id()
+		gtk.gdk.threads_leave()
 		if date == None:
 			date_today = datetime.date.today()
 			date = date_today.isoformat()
@@ -1301,8 +1364,17 @@ class Model_Notebook:
 		team_ppg = {}
 		self.parent.cur.execute("SELECT team_id FROM team_season WHERE season_id = '" + str(season_id) + "'")
 		for team in self.parent.cur.fetchall():
-			exp_gf = float(self.parent.table_note.fetch_gf(int(team[0]), date)) / float(self.parent.table_note.fetch_gp(int(team[0]), date))
-			exp_ga = float(self.parent.table_note.fetch_ga(int(team[0]), date)) / float(self.parent.table_note.fetch_gp(int(team[0]), date))
+			gtk.gdk.threads_enter()
+			team_gp = float(self.parent.table_note.fetch_gp(int(team[0]), date))
+			team_gf = float(self.parent.table_note.fetch_gf(int(team[0]), date))
+			team_ga = float(self.parent.table_note.fetch_ga(int(team[0]), date))
+			if(team_gp != 0):
+				exp_gf = team_gf / team_gp
+				exp_ga = team_ga / team_gp
+			else:
+				exp_gf = 0
+				exp_ga = 0
+			gtk.gdk.threads_leave()
 
 			tie_chance = self.tie_chance_calc(0, 0, exp_gf, exp_ga)
 			win_chance = self.win_chance_calc(0, 0, exp_gf, exp_ga)
@@ -1313,7 +1385,9 @@ class Model_Notebook:
 
 class Base:
 	def __init__(self):
-		self.db = sqlite3.connect("test.sqlite")
+		gtk.gdk.threads_init()
+
+		self.db = sqlite3.connect("test.sqlite", check_same_thread = False)
 		self.cur = self.db.cursor()
 		self.cur.execute("CREATE TABLE IF NOT EXISTS leagues (" +
                                     "league_name STRING UNIQUE, " +
@@ -1418,7 +1492,9 @@ class Base:
 
 
 	def main(self):
+		gtk.gdk.threads_enter()
 		gtk.main()
+		gtk.gdk.threads_leave()
 
 if __name__ == "__main__":
 	base = Base()
