@@ -1,3 +1,5 @@
+#!/usr/bin/python
+
 import pygtk
 pygtk.require('2.0')
 import gtk
@@ -10,14 +12,16 @@ import math
 import threading
 
 def get_team_from_name(cur, name):
-	cur.execute("SELECT city, id FROM teams WHERE team_name = '" + name + "'")
+	cur.execute("SELECT city, id, abbr FROM teams WHERE team_name = '" + name + "'")
 	city = None
 	myid = None
+	abbr = None
 	for row in cur:
 		if row:
 			city = row[0]
 			myid = row[1]
-	return (name, city, myid)
+			abbr = row[2]
+	return (name, city, abbr, myid)
 
 style_text_array = [
 		"Standard format",
@@ -408,8 +412,12 @@ class Teams_Notebook:
 		self.list_hbox.set_border_width(5)
 		self.parent.teams_note_vbox.pack_start(self.list_hbox)
 
+		all_list_vbox = gtk.VBox(spacing=10)
+		all_list_vbox.set_border_width(5)
+		self.list_hbox.pack_start(all_list_vbox)
+
 		scrolled_window = gtk.ScrolledWindow()
-		self.list_hbox.pack_start(scrolled_window)
+		all_list_vbox.pack_start(scrolled_window)
 
 		list_store = gtk.ListStore(gobject.TYPE_STRING)
 
@@ -419,6 +427,19 @@ class Teams_Notebook:
 
 		column = gtk.TreeViewColumn("All Teams", gtk.CellRendererText(), text=0)
 		self.all_view.append_column(column)
+
+		all_list_hbox = gtk.HBox(spacing=10)
+		all_list_hbox.set_border_width(5)
+		all_list_vbox.pack_start(all_list_hbox, expand=False)
+
+		self.all_team_edit_button = gtk.Button("Edit team")
+		all_list_hbox.add(self.all_team_edit_button)
+		self.all_team_edit_button.connect('clicked', self.edit_team, self.all_view)
+
+		self.all_team_del_button = gtk.Button("Delete team")
+		all_list_hbox.add(self.all_team_del_button)
+		# self.all_team_del_button.connect('clicked', self.delete_team, self.all_view)
+
 
 		self.buttons_vbox = gtk.VBox(spacing=10)
 		self.buttons_vbox.set_border_width(5)
@@ -431,8 +452,12 @@ class Teams_Notebook:
 		self.add_button.connect('clicked', self.add_team)
 		self.remove_button.connect('clicked', self.remove_team)
 
+		league_list_vbox = gtk.VBox(spacing=10)
+		league_list_vbox.set_border_width(5)
+		self.list_hbox.pack_start(league_list_vbox)
+
 		scrolled_window = gtk.ScrolledWindow()
-		self.list_hbox.pack_start(scrolled_window)
+		league_list_vbox.pack_start(scrolled_window)
 
 		list_store = gtk.ListStore(gobject.TYPE_STRING)
 
@@ -443,6 +468,18 @@ class Teams_Notebook:
 		column = gtk.TreeViewColumn("League Teams", gtk.CellRendererText(), text=0)
 		self.league_view.append_column(column)
 
+		league_list_hbox = gtk.HBox(spacing=10)
+		league_list_hbox.set_border_width(5)
+		league_list_vbox.pack_start(league_list_hbox, expand=False)
+
+		self.league_team_edit_button = gtk.Button("Edit team")
+		league_list_hbox.add(self.league_team_edit_button)
+		self.league_team_edit_button.connect('clicked', self.edit_team, self.league_view)
+
+		self.league_team_del_button = gtk.Button("Delete team")
+		league_list_hbox.add(self.league_team_del_button)
+		# self.league_team_del_button.connect('clicked', self.delete_team, self.league_view)
+
 		self.teamops_hbox = gtk.HBox(spacing=10)
 		self.teamops_hbox.set_border_width(5)
 		self.parent.teams_note_vbox.pack_end(self.teamops_hbox, expand=False)
@@ -450,14 +487,6 @@ class Teams_Notebook:
 		self.team_add_button = gtk.Button("Add team")
 		self.teamops_hbox.add(self.team_add_button)
 		self.team_add_button.connect('clicked', self.edit_team)
-
-		self.team_edit_button = gtk.Button("Edit team")
-		self.teamops_hbox.add(self.team_edit_button)
-		self.team_edit_button.connect('clicked', self.edit_team)
-
-		self.team_del_button = gtk.Button("Delete team")
-		self.teamops_hbox.add(self.team_del_button)
-		# self.team_del_button.connect('clicked', self.delete_team)
 
 		self.repop()
 
@@ -499,7 +528,7 @@ class Teams_Notebook:
 			myid = None
 			city = ""
 			return get_team_from_name(self.parent.cur, name)
-		return (None, None, None)
+		return (None, None, None, None)
 
 	def add_team(self, button):
 		(name, city, myid) = self.get_team(self.all_view)
@@ -513,15 +542,18 @@ class Teams_Notebook:
 		self.parent.db.commit()
 		self.repop()
 
-	def edit_team(self, button):
+	def edit_team(self, button, view):
 		if button.get_label() == "Edit team":
 			edit = True
 		else:
 			edit = False
 
-		all_list = self.all_view.get_model()
+		if view == None:
+			return
+
+		all_list = view.get_model()
 		if edit == True:
-			(name, city, myid) = self.get_team(self.all_view)
+			(name, city, abbr, myid) = self.get_team(view)
 
 
 		dialog = gtk.Dialog("Edit Team",
@@ -552,9 +584,21 @@ class Teams_Notebook:
 		city_entry.show()
 		city_hbox.pack_start(city_entry)
 
+		abbr_hbox = gtk.HBox(spacing=10)
+		abbr_hbox.set_border_width(5)
+		abbr_hbox.show()
+		dialog.vbox.pack_start(abbr_hbox)
+		abbr_label = gtk.Label("Abbr:")
+		abbr_label.show()
+		abbr_hbox.pack_start(abbr_label)
+		abbr_entry = gtk.Entry()
+		abbr_entry.show()
+		abbr_hbox.pack_start(abbr_entry)
+
 		if edit == True:
 			name_entry.set_text(name)
 			city_entry.set_text(city)
+			abbr_entry.set_text(abbr)
 
 		response = dialog.run()
 		if response == gtk.RESPONSE_ACCEPT:
@@ -562,12 +606,14 @@ class Teams_Notebook:
 				if edit == True:
 					self.parent.cur.execute("UPDATE teams " + 
 					                           "SET team_name = '" + name_entry.get_text() + "', " + 
-					                              "city = '" + city_entry.get_text() + "' " + 
+					                              "city = '" + city_entry.get_text() + "', " + 
+					                              "abbr = '" + abbr_entry.get_text() + "' " + 
 					                           "WHERE team_name = '" + name + "'")
 				else:
-					self.parent.cur.execute("INSERT INTO teams (team_name, city) " + 
+					self.parent.cur.execute("INSERT INTO teams (team_name, city, abbr) " + 
 					                           "VALUES ('" + name_entry.get_text() + "', '" +
-					                              city_entry.get_text() + "')")
+					                              city_entry.get_text() + "', '" + 
+								      abbr_entry.get_text() + "')")
 				self.parent.db.commit()
 
 				self.repop()
@@ -658,8 +704,9 @@ class Games_Notebook:
 		self.gameops_hbox.add(self.game_edit_button)
 		self.game_edit_button.connect('clicked', self.edit_game)
 
-		self.game_del_button = gtk.Button("Delete game")
-		self.gameops_hbox.add(self.game_del_button)
+		self.game_delete_button = gtk.Button("Delete game")
+		self.gameops_hbox.add(self.game_delete_button)
+		self.game_delete_button.connect('clicked', self.delete_game)
 
 		self.repop()
 
@@ -740,6 +787,24 @@ class Games_Notebook:
 				combo.append_text(name[0])
 		if row:
 			combo.set_active(0)
+
+	def delete_game(self, button):
+		all_list = self.all_view.get_model()
+		(date,
+			home, home_goals, home_pks,
+			away, away_goals, away_pks,
+			aet, pks, style, played) = self.get_game(self.all_view)
+		if date == None:
+			return
+		season_id_text = str(self.parent.season_combo.get_id())
+		(home_text, home_city_text, home_abbr_text, home_id) = get_team_from_name(self.parent.cur, home)
+		(away_text, away_city_text, away_abbr_text, away_id) = get_team_from_name(self.parent.cur, away)
+		self.parent.cur.execute("DELETE FROM games WHERE (season_id = '" + season_id_text + "' AND " +
+								    "home_id = '" + str(home_id) + "' AND " +
+								    "away_id = '" + str(away_id) + "' AND " +
+								    "date = '"    + date + "')")
+		self.repop()
+
 
 	def edit_game(self, button):
 		if button.get_label() == "Edit game":
@@ -933,16 +998,16 @@ class Games_Notebook:
 			style_text = model[index][0]
 			style_num_text = str(index)
 
-			(home_text, home_city_text, home_id) = get_team_from_name(self.parent.cur, home_text)
-			(away_text, away_city_text, away_id) = get_team_from_name(self.parent.cur, away_text)
+			(home_text, home_city_text, home_abbr_text, home_id) = get_team_from_name(self.parent.cur, home_text)
+			(away_text, away_city_text, away_abbr_text, away_id) = get_team_from_name(self.parent.cur, away_text)
 			home_id_text = str(home_id)
 			away_id_text = str(away_id)
 
 
 			if home_text != away_text:
 				if edit == True:
-					(home, orig_home_city_text, orig_home_id) = get_team_from_name(self.parent.cur, home)
-					(away, orig_away_city_text, orig_away_id) = get_team_from_name(self.parent.cur, away)
+					(home, orig_home_city_text, orig_home_abbr_text, orig_home_id) = get_team_from_name(self.parent.cur, home)
+					(away, orig_away_city_text, orig_away_abbr_text, orig_away_id) = get_team_from_name(self.parent.cur, away)
 					orig_home_id_text = str(orig_home_id)
 					orig_away_id_text = str(orig_away_id)
 					self.parent.cur.execute("UPDATE games SET " +
@@ -1421,6 +1486,32 @@ class Base:
 				    "played BOOL, " +
 				    "game_style INTEGER, " +
 				    "id INTEGER PRIMARY KEY ASC)")
+		self.cur.execute("CREATE TABLE IF NOT EXISTS version (" +
+				    "number INTEGER)")
+		
+		self.cur.execute("SELECT number FROM version")
+		row = self.cur.fetchone()
+		if(row == None):
+			print "Adding version number to table"
+			self.cur.execute("INSERT INTO version (number) VALUES('1')")
+			self.db.commit()
+		self.cur.execute("SELECT number FROM version")
+		row = self.cur.fetchone()
+		while (row != None):
+			if(row[0] == 1):
+				print "Got a version 1 DB, upgrading to version 2"
+				self.cur.execute("ALTER TABLE teams ADD COLUMN abbr STRING")
+				self.cur.execute("DELETE FROM version")
+				self.cur.execute("INSERT INTO version (number) VALUES('2')")
+				self.db.commit()
+				self.cur.execute("SELECT number FROM version")
+				row = self.cur.fetchone()
+			elif(row[0] == 2):
+				print "Got a version 2 DB"
+				break
+			else:
+				print "Error, got an unsupported DB version"
+				return
 
 		self.window = gtk.Window(gtk.WINDOW_TOPLEVEL)
 		self.window.connect('destroy', lambda w: gtk.main_quit())
