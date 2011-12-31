@@ -438,7 +438,7 @@ class Teams_Notebook:
 
 		self.all_team_del_button = gtk.Button("Delete team")
 		all_list_hbox.add(self.all_team_del_button)
-		# self.all_team_del_button.connect('clicked', self.delete_team, self.all_view)
+		self.all_team_del_button.connect('clicked', self.delete_team, self.all_view)
 
 
 		self.buttons_vbox = gtk.VBox(spacing=10)
@@ -478,7 +478,7 @@ class Teams_Notebook:
 
 		self.league_team_del_button = gtk.Button("Delete team")
 		league_list_hbox.add(self.league_team_del_button)
-		# self.league_team_del_button.connect('clicked', self.delete_team, self.league_view)
+		self.league_team_del_button.connect('clicked', self.delete_team, self.league_view)
 
 		self.teamops_hbox = gtk.HBox(spacing=10)
 		self.teamops_hbox.set_border_width(5)
@@ -531,14 +531,29 @@ class Teams_Notebook:
 		return (None, None, None, None)
 
 	def add_team(self, button):
-		(name, city, myid) = self.get_team(self.all_view)
+		(name, city, abbr, myid) = self.get_team(self.all_view)
 		self.parent.cur.execute("INSERT INTO team_season (team_id, season_id) VALUES ('" + str(myid) + "', '" + str(self.parent.season_combo.get_id()) + "')")
 		self.parent.db.commit()
 		self.repop()
 
 	def remove_team(self, button):
-		(name, city, myid) = self.get_team(self.league_view)
+		(name, city, abbr, myid) = self.get_team(self.league_view)
 		self.parent.cur.execute("DELETE FROM team_season WHERE (team_id='" + str(myid) + "' AND season_id='" + str(self.parent.season_combo.get_id()) + "')")
+		self.parent.db.commit()
+		self.repop()
+
+	def delete_team(self, button, view):
+		if view == None:
+			return
+		all_list = view.get_model()
+		(name, city, abbr, myid) = self.get_team(view)
+
+		self.parent.cur.execute("SELECT id FROM games WHERE (home_id='" + str(myid) + "' OR away_id='" + str(myid) + "')")
+		for row in self.parent.cur.fetchall():
+			self.parent.games_note.delete_game_by_id(row[0])
+
+		self.parent.cur.execute("DELETE FROM team_season WHERE (team_id='" + str(myid) + "')")
+		self.parent.cur.execute("DELETE FROM teams WHERE (id='" + str(myid) + "')")
 		self.parent.db.commit()
 		self.repop()
 
@@ -788,6 +803,11 @@ class Games_Notebook:
 		if row:
 			combo.set_active(0)
 
+	def delete_game_by_id(self, game_id):
+		self.parent.cur.execute("DELETE FROM games WHERE (id = '" + str(game_id) + "')")
+		self.parent.db.commit()
+		
+
 	def delete_game(self, button):
 		all_list = self.all_view.get_model()
 		(date,
@@ -799,10 +819,15 @@ class Games_Notebook:
 		season_id_text = str(self.parent.season_combo.get_id())
 		(home_text, home_city_text, home_abbr_text, home_id) = get_team_from_name(self.parent.cur, home)
 		(away_text, away_city_text, away_abbr_text, away_id) = get_team_from_name(self.parent.cur, away)
-		self.parent.cur.execute("DELETE FROM games WHERE (season_id = '" + season_id_text + "' AND " +
+
+		self.parent.cur.execute("SELECT id FROM games WHERE (season_id = '" + season_id_text + "' AND " +
 								    "home_id = '" + str(home_id) + "' AND " +
 								    "away_id = '" + str(away_id) + "' AND " +
 								    "date = '"    + date + "')")
+		row = self.parent.cur.fetchone()
+		if row != None:
+			self.delete_game_by_id(row[0])
+
 		self.repop()
 
 
