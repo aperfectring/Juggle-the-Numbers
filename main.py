@@ -11,6 +11,18 @@ import datetime
 import math
 import threading
 
+def get_team_from_id(cur, myid):
+	cur.execute("SELECT team_name, city, abbr FROM teams WHERE id = '" + str(myid) + "'")
+	name = None
+	city = None
+	abbr = None
+	for row in cur:
+		if row:
+			name = row[0]
+			city = row[1]
+			abbr = row[2]
+	return (name, city, abbr, myid)
+
 def get_team_from_name(cur, name):
 	cur.execute("SELECT city, id, abbr FROM teams WHERE team_name = '" + name + "'")
 	city = None
@@ -120,7 +132,6 @@ class League_Combo:
 
 		self.parent.cur.execute("SELECT league_name FROM leagues")
                 for row in self.parent.cur:
-			print row
 			self.combo.append_text(row[0])
 
 		model = self.combo.get_model()
@@ -426,6 +437,7 @@ class Teams_Notebook:
 		self.all_view.set_model(list_store)
 
 		column = gtk.TreeViewColumn("All Teams", gtk.CellRendererText(), text=0)
+		column.set_sort_column_id(0)
 		self.all_view.append_column(column)
 
 		all_list_hbox = gtk.HBox(spacing=10)
@@ -466,6 +478,7 @@ class Teams_Notebook:
 		self.league_view.set_model(list_store)
 
 		column = gtk.TreeViewColumn("League Teams", gtk.CellRendererText(), text=0)
+		column.set_sort_column_id(0)
 		self.league_view.append_column(column)
 
 		league_list_hbox = gtk.HBox(spacing=10)
@@ -486,7 +499,7 @@ class Teams_Notebook:
 		
 		self.team_add_button = gtk.Button("Add team")
 		self.teamops_hbox.add(self.team_add_button)
-		self.team_add_button.connect('clicked', self.edit_team)
+		self.team_add_button.connect('clicked', self.edit_team, self.all_view)
 
 		self.repop()
 
@@ -1314,7 +1327,67 @@ class Model_Notebook:
 		self.calc_thread = None
 
 		self.calc_progress = gtk.ProgressBar()
-		self.parent.model_note_vbox.pack_start(self.calc_progress)
+		self.parent.model_note_vbox.pack_start(self.calc_progress, expand = False)
+
+		self.export_button = gtk.Button("Export")
+		self.parent.model_note_vbox.pack_start(self.export_button, expand = False)
+		self.export_button.connect('clicked', self.export_text)
+
+	def export_text(self, button):
+		model = self.parent.league_combo.combo.get_model()
+		index = self.parent.league_combo.combo.get_active()
+		print '<br />'
+		print '<table cellspacing="0" cellpadding="3" id="',model[index][0],'">'
+		print '  <thead><tr><td>Team</td><td>PPG</td><td>Pts</td><td>1-O Pts</td><td>GP</td><td>W</td><td>L</td><td>T</td><td>GF</td><td>GA</td><td>GD</td><td>GF:GA</td><td>EAP</td></tr></thead>'
+
+		season_id = self.parent.season_combo.get_id()
+		self.parent.cur.execute("SELECT team_id FROM team_season WHERE season_id = '" + str(season_id) + "'")
+
+
+		for team in self.parent.cur.fetchall():
+			(name, city, abbr, myid) = get_team_from_id(self.parent.cur, team[0])
+			pts = self.parent.table_note.fetch_pts(myid)
+			gp = self.parent.table_note.fetch_gp(myid)
+			ppg = round(float(pts)/float(gp),2)
+			basic = self.fetch_basic(name)
+			wins = self.parent.table_note.fetch_wins(myid)
+			loss = self.parent.table_note.fetch_loss(myid)
+			ties = self.parent.table_note.fetch_ties(myid)
+			gf = self.parent.table_note.fetch_gf(myid)
+			ga = self.parent.table_note.fetch_ga(myid)
+			gd = gf - ga
+			if(ga != 0):
+				gfga = '{0:.2f}'.format(float(gf) / float(ga))
+			else:
+				gfga = 'N/A'
+			eap = self.fetch_eap(name)
+
+			print "  <tr><td>",abbr,"</td><td>",'{0:.2f}'.format(ppg),"</td><td>",pts,"</td><td>",'{0:.2f}'.format(basic),"</td><td>",gp,"</td><td>",wins,"</td><td>",loss,"</td><td>",ties,"</td><td>",gf,"</td><td>",ga,"</td><td>",gd,"</td><td>",gfga,"</td><td>",'{0:.2f}'.format(eap),"</td></tr>"
+		print "</table>"
+		print '<script type="text/javascript">'
+		model = self.parent.league_combo.combo.get_model()
+		index = self.parent.league_combo.combo.get_active()
+		print "var",model[index][0],"= new SortableTable(document.getElementById('",model[index][0],"'), 100);"
+		print "</script>"
+
+	def fetch_basic(self, name):
+		all_model = self.all_view.get_model()
+		myiter = all_model.get_iter_first()
+		while (myiter != None):
+			if(all_model.get(myiter, 0)[0] == name):
+				return all_model.get(myiter, 1)[0]
+			myiter = all_model.iter_next(myiter)
+		return None
+		
+	def fetch_eap(self, name):
+		all_model = self.all_view.get_model()
+		myiter = all_model.get_iter_first()
+		while (myiter != None):
+			if(all_model.get(myiter, 0)[0] == name):
+				return all_model.get(myiter, 2)[0]
+			myiter = all_model.iter_next(myiter)
+		return None
+		
 
 	def clear(self):
 		self.all_view.get_model().clear()
@@ -1331,8 +1404,8 @@ class Model_Notebook:
 		self.calc_progress.set_fraction(0)
 		self.calc_progress.set_text("Calculating...")		
 		gtk.gdk.threads_leave()
-		basic_pts = self.basic_model_calc("2011-07-01")
-		eap_ppg = self.eap_model_calc("2011-07-01")
+		basic_pts = self.basic_model_calc()
+		eap_ppg = self.eap_model_calc()
 
 #		basic_pts_new = self.basic_model_calc()
 
