@@ -774,6 +774,9 @@ class Games_Notebook:
 
 		self.parent.table_note.repop()
 		self.parent.model_note.clear()
+		if hasattr(self.parent, "notebook"):
+			if self.parent.notebook.get_current_page() != -1:
+				self.parent.model_note.do_recalc(self.parent.notebook, 0, self.parent.notebook.get_current_page())
 
 	def get_game(self, view):
 		all_list = view.get_model()
@@ -1324,7 +1327,7 @@ class Model_Notebook:
 		self.all_view.append_column(column)
 
 		self.parent.notebook.connect('switch-page', self.do_recalc)
-		self.calc_thread = None
+		self.calc_thread = threading.Thread(target=self.repop)
 
 		self.calc_progress = gtk.ProgressBar()
 		self.parent.model_note_vbox.pack_start(self.calc_progress, expand = False)
@@ -1332,6 +1335,8 @@ class Model_Notebook:
 		self.export_button = gtk.Button("Export")
 		self.parent.model_note_vbox.pack_start(self.export_button, expand = False)
 		self.export_button.connect('clicked', self.export_text)
+
+		self.thread_sig = threading.Event()
 
 	def export_text(self, button):
 		model = self.parent.league_combo.combo.get_model()
@@ -1394,12 +1399,19 @@ class Model_Notebook:
 	def clear(self):
 		self.all_view.get_model().clear()
 
+	def kick_thread(self):
+		if self.calc_thread.is_alive():
+			self.thread_sig.set()
+			self.calc_thread.join()
+			self.thread_sig.clear()
+		self.calc_thread = threading.Thread(target=self.repop)
+		self.calc_thread.start()
+		
+
 	def do_recalc(self, notebook, page_NOUSE, page_num):
 		if notebook.get_tab_label(notebook.get_nth_page(page_num)).get_text() == "Model":
-			if not self.calc_thread or not self.calc_thread.is_alive():
-				self.calc_thread = threading.Thread(target=self.repop)
-			if not self.calc_thread.is_alive():
-				self.calc_thread.start()
+			kickthr = threading.Thread(target=self.kick_thread)
+			kickthr.start()
 
 	def repop(self):
 		gtk.gdk.threads_enter()
@@ -1407,7 +1419,12 @@ class Model_Notebook:
 		self.calc_progress.set_text("Calculating...")		
 		gtk.gdk.threads_leave()
 		basic_pts = self.basic_model_calc()
+		if self.thread_sig.wait(0.01):
+			return
 		eap_ppg = self.eap_model_calc()
+#		if self.thread_sig.is_set():
+		if self.thread_sig.wait(0.01):
+			return
 
 #		basic_pts_new = self.basic_model_calc()
 
@@ -1499,6 +1516,9 @@ class Model_Notebook:
 			home = game[0]
 			away = game[1]
 			gtk.gdk.threads_enter()
+			if self.thread_sig.wait(0.01):
+				gtk.gdk.threads_leave()
+				return
 			if(team_gp[home] == 0) or (team_gp[away] == 0):
 				home_exp_gf = 0.0
 				away_exp_gf = 0.0
