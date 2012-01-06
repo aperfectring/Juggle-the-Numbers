@@ -1336,9 +1336,10 @@ class Model_Notebook:
 	def export_text(self, button):
 		model = self.parent.league_combo.combo.get_model()
 		index = self.parent.league_combo.combo.get_active()
-		print '<br />'
-		print '<table cellspacing="0" cellpadding="3" id="',model[index][0],'">'
-		print '  <thead><tr><td>Team</td><td>PPG</td><td>Pts</td><td>1-O Pts</td><td>GP</td><td>W</td><td>L</td><td>T</td><td>GF</td><td>GA</td><td>GD</td><td>GF:GA</td><td>EAP</td></tr></thead>'
+		f = open('outfile', 'w')
+		f.write('<br />\n')
+		f.write('<table cellspacing="0" cellpadding="3" id="'+str(model[index][0])+'">\n')
+		f.write('  <thead><tr><td>Team</td><td>PPG</td><td>Pts</td><td>1-O Pts</td><td>GP</td><td>W</td><td>L</td><td>T</td><td>GF</td><td>GA</td><td>GD</td><td>GF:GA</td><td>EAP</td></tr></thead>\n')
 
 		season_id = self.parent.season_combo.get_id()
 		self.parent.cur.execute("SELECT team_id FROM team_season WHERE season_id = '" + str(season_id) + "'")
@@ -1362,13 +1363,14 @@ class Model_Notebook:
 				gfga = 'N/A'
 			eap = self.fetch_eap(name)
 
-			print "  <tr><td>",abbr,"</td><td>",'{0:.2f}'.format(ppg),"</td><td>",pts,"</td><td>",'{0:.2f}'.format(basic),"</td><td>",gp,"</td><td>",wins,"</td><td>",loss,"</td><td>",ties,"</td><td>",gf,"</td><td>",ga,"</td><td>",gd,"</td><td>",gfga,"</td><td>",'{0:.2f}'.format(eap),"</td></tr>"
-		print "</table>"
-		print '<script type="text/javascript">'
+			f.write("  <tr><td>"+str(abbr)+"</td><td>"+'{0:.2f}'.format(ppg)+"</td><td>"+str(pts)+"</td><td>"+'{0:.2f}'.format(basic)+"</td><td>"+str(gp)+"</td><td>"+str(wins)+"</td><td>"+str(loss)+"</td><td>"+str(ties)+"</td><td>"+str(gf)+"</td><td>"+str(ga)+"</td><td>"+str(gd)+"</td><td>"+str(gfga)+"</td><td>"+'{0:.2f}'.format(eap)+"</td></tr>\n")
+		f.write("</table>\n")
+		f.write('<script type="text/javascript">\n')
 		model = self.parent.league_combo.combo.get_model()
 		index = self.parent.league_combo.combo.get_active()
-		print "var",model[index][0],"= new SortableTable(document.getElementById('",model[index][0],"'), 100);"
-		print "</script>"
+		f.write("var "+str(model[index][0])+" = new SortableTable(document.getElementById('"+str(model[index][0])+"'), 100);\n")
+		f.write("</script>\n")
+		f.close()
 
 	def fetch_basic(self, name):
 		all_model = self.all_view.get_model()
