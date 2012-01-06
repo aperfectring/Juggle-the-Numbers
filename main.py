@@ -738,19 +738,6 @@ class Games_Notebook:
 
 		self.repop()
 
-#		self.city_hbox = gtk.HBox(spacing=10)
-#		self.city_hbox.set_border_width(5)
-#		self.parent.teams_note_vbox.pack_start(self.city_hbox, expand=False)
-
-#		self.city_label = gtk.Label("City:")
-#		self.city_hbox.add(self.city_label)
-
-#		self.city_entry = gtk.Entry()
-#		self.city_hbox.add(self.city_entry)
-
-#		self.update_button = gtk.Button("Update")
-#		self.parent.teams_note_vbox.pack_end(self.update_button, expand=False)
-
 	def repop(self):
 		sid = self.parent.season_combo.get_id()
 		all_list = self.all_view.get_model()
@@ -773,6 +760,8 @@ class Games_Notebook:
 			all_list.append( (row[0], home_text, row[2], row[3], away_text, row[5], row[6], row[7], row[8], style_text_array[row[9]], row[10]) )
 
 		self.parent.table_note.repop()
+		if hasattr(self.parent, "results_note"):
+			self.parent.results_note.repop()
 		self.parent.model_note.clear()
 		if hasattr(self.parent, "notebook"):
 			if self.parent.notebook.get_current_page() != -1:
@@ -1568,6 +1557,140 @@ class Model_Notebook:
 
 		return team_ppg
 
+class Results_Notebook:
+	def __init__(self, parent):
+		self.parent = parent
+
+		season_id = self.parent.season_combo.get_id()
+		list_store = gtk.ListStore(gobject.TYPE_STRING,
+						gobject.TYPE_STRING,
+						gobject.TYPE_STRING,
+						gobject.TYPE_STRING,
+						gobject.TYPE_STRING,
+						gobject.TYPE_STRING,
+						gobject.TYPE_STRING,
+						gobject.TYPE_STRING,
+						gobject.TYPE_STRING,
+						gobject.TYPE_STRING,
+						gobject.TYPE_STRING,
+						gobject.TYPE_STRING,
+						gobject.TYPE_STRING,
+						gobject.TYPE_STRING,
+						gobject.TYPE_STRING,
+						gobject.TYPE_STRING,
+						gobject.TYPE_STRING,
+						gobject.TYPE_STRING,
+						gobject.TYPE_STRING,
+						gobject.TYPE_STRING,
+						gobject.TYPE_STRING,
+						gobject.TYPE_STRING,
+						gobject.TYPE_STRING,
+						gobject.TYPE_STRING,
+						gobject.TYPE_STRING,
+						gobject.TYPE_STRING,
+						gobject.TYPE_STRING,
+						gobject.TYPE_STRING,
+						gobject.TYPE_STRING,
+						gobject.TYPE_STRING,
+						gobject.TYPE_STRING,
+						gobject.TYPE_STRING,
+						gobject.TYPE_STRING,
+						gobject.TYPE_STRING,
+						gobject.TYPE_STRING,
+						gobject.TYPE_STRING,
+						gobject.TYPE_STRING,
+						gobject.TYPE_STRING,
+						gobject.TYPE_STRING,
+						gobject.TYPE_STRING,
+						gobject.TYPE_STRING,
+						gobject.TYPE_STRING,
+						gobject.TYPE_STRING,
+						gobject.TYPE_STRING,
+						gobject.TYPE_STRING,
+						gobject.TYPE_STRING,
+						gobject.TYPE_STRING,
+						gobject.TYPE_STRING,
+						gobject.TYPE_STRING,
+						gobject.TYPE_STRING,
+						gobject.TYPE_STRING,
+						gobject.TYPE_STRING)
+		self.all_view = gtk.TreeView()
+
+		column = gtk.TreeViewColumn("Team", gtk.CellRendererText(), text=0)
+		self.all_view.append_column(column)
+
+		self.parent.cur.execute("SELECT team_id FROM team_season WHERE season_id = '" + str(season_id) + "'")
+		row = self.parent.cur.fetchone()
+		if row:
+			team_id = row[0]
+		else:
+			team_id = 0
+
+		self.parent.cur.execute("SELECT COUNT(*) FROM games WHERE (season_id = '" + str(season_id) + "' AND (home_id = '" + str(team_id) + "' OR away_id = '" + str(team_id) + "'))")
+		row = self.parent.cur.fetchone()
+		if row:
+			for n in range(0,row[0]):
+				column = gtk.TreeViewColumn(str(n+1), gtk.CellRendererText(), text=n+1)
+				self.all_view.append_column(column)
+		
+		self.list_hbox = gtk.HBox(spacing=10)
+		self.list_hbox.set_border_width(5)
+		self.parent.results_note_vbox.pack_start(self.list_hbox)
+
+		scrolled_window = gtk.ScrolledWindow()
+		scrolled_window.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_NEVER)
+		self.list_hbox.pack_start(scrolled_window)
+
+		
+		scrolled_window.add(self.all_view)
+
+		self.all_view.set_model(list_store)
+		self.repop()
+
+	def repop(self):
+		season_id = self.parent.season_combo.get_id()
+		
+		all_list = self.all_view.get_model()
+		all_list.clear()
+
+		self.parent.cur.execute("SELECT team_id FROM team_season WHERE season_id = '" + str(season_id) + "'")
+		for row in self.parent.cur.fetchall():
+			team_id = row[0]
+			(name, city, abbr, team_id) = get_team_from_id(self.parent.cur, team_id)
+			team_row = [name]
+
+			self.parent.cur.execute("SELECT home_id, home_goals, away_id, away_goals, played FROM games WHERE (season_id = '" + str(season_id) + "' AND (home_id = '" + str(team_id) + "' OR away_id = '" + str(team_id) + "')) ORDER BY date")
+
+			for game in self.parent.cur.fetchall():
+				other_team_id = game[0]
+				if game[0] == team_id:
+					other_team_id = game[2]
+					other_goals = game[3]
+					goals = game[1]
+					prefix = ""
+				else:
+					other_team_id = game[0]
+					other_goals = game[1]
+					goals = game[3]
+					prefix = "@"
+				
+				(other_team_name, other_team_city, other_team_abbr, other_team_id) = get_team_from_id(self.parent.cur, other_team_id)
+				other_team_abbr = prefix + other_team_abbr
+				text = other_team_abbr + "\n"
+				if game[4] == "TRUE":
+					text += str(game[1])
+				else:
+					text += " "
+				text += "-"
+				if game[4] == "TRUE":
+					text += str(game[3])
+				else:
+					text += " "
+				team_row.append(text)
+			for n in range(len(team_row),all_list.get_n_columns()):
+				team_row.append("")
+			all_list.append(team_row)
+
 class Base:
 	def __init__(self):
 		gtk.gdk.threads_init()
@@ -1692,6 +1815,11 @@ class Base:
 		self.model_note = Model_Notebook(self)
 
 		self.games_note = Games_Notebook(self)
+
+		self.results_note_vbox = gtk.VBox(spacing=10)
+		self.results_note_vbox.set_border_width(5)
+		self.notebook.append_page(self.results_note_vbox, gtk.Label("Results"))
+		self.results_note = Results_Notebook(self)
 
 		#### Update the combo boxes so the notebooks show the right data ####
 		self.league_combo.update(self.league_combo.combo)
