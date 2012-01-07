@@ -626,6 +626,8 @@ class Teams_Notebook:
 		if edit == True:
 			name_entry.set_text(name)
 			city_entry.set_text(city)
+			if abbr == None:
+				abbr = ""
 			abbr_entry.set_text(abbr)
 
 		response = dialog.run()
@@ -1653,6 +1655,26 @@ class Results_Notebook:
 		all_list = self.all_view.get_model()
 		all_list.clear()
 
+		for column in self.all_view.get_columns():
+			self.all_view.remove_column(column)
+
+		column = gtk.TreeViewColumn("Team", gtk.CellRendererText(), text=0)
+		self.all_view.append_column(column)
+
+		self.parent.cur.execute("SELECT team_id FROM team_season WHERE season_id = '" + str(season_id) + "'")
+		row = self.parent.cur.fetchone()
+		if row:
+			team_id = row[0]
+		else:
+			team_id = 0
+
+		self.parent.cur.execute("SELECT COUNT(*) FROM games WHERE (season_id = '" + str(season_id) + "' AND (home_id = '" + str(team_id) + "' OR away_id = '" + str(team_id) + "'))")
+		row = self.parent.cur.fetchone()
+		if row:
+			for n in range(0,row[0]):
+				column = gtk.TreeViewColumn(str(n+1), gtk.CellRendererText(), text=n+1)
+				self.all_view.append_column(column)
+
 		self.parent.cur.execute("SELECT team_id FROM team_season WHERE season_id = '" + str(season_id) + "'")
 		for row in self.parent.cur.fetchall():
 			team_id = row[0]
@@ -1675,7 +1697,10 @@ class Results_Notebook:
 					prefix = "@"
 				
 				(other_team_name, other_team_city, other_team_abbr, other_team_id) = get_team_from_id(self.parent.cur, other_team_id)
-				other_team_abbr = prefix + other_team_abbr
+				if other_team_abbr != None:
+					other_team_abbr = prefix + other_team_abbr
+				else:
+					other_team_abbr = prefix
 				text = other_team_abbr + "\n"
 				if game[4] == "TRUE":
 					text += str(game[1])
