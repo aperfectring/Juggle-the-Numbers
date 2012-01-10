@@ -503,19 +503,6 @@ class Teams_Notebook:
 
 		self.repop()
 
-#		self.city_hbox = gtk.HBox(spacing=10)
-#		self.city_hbox.set_border_width(5)
-#		self.parent.teams_note_vbox.pack_start(self.city_hbox, expand=False)
-
-#		self.city_label = gtk.Label("City:")
-#		self.city_hbox.add(self.city_label)
-
-#		self.city_entry = gtk.Entry()
-#		self.city_hbox.add(self.city_entry)
-
-#		self.update_button = gtk.Button("Update")
-#		self.parent.teams_note_vbox.pack_end(self.update_button, expand=False)
-
 	def repop(self):
 		sid = self.parent.season_combo.get_id()
 		all_list = self.all_view.get_model()
@@ -1465,6 +1452,17 @@ class Model_Notebook:
 
 		return tie_chance
 
+	def basic_model_exp_goals_cal(self, home_gf, away_ga, home_gp, away_gp, hfa_adj):
+		if(home_gp == 0) or (away_gp == 0):
+			return 0.0
+		return (home_gf + away_ga) / (home_gp + away_gp) * hfa_adj
+
+	def basic_model_game_calc(self, home_exp_gf, away_exp_gf):
+		tie_chance = self.tie_chance_calc(0, 0, home_exp_gf, away_exp_gf)
+		home_win_chance = self.win_chance_calc(0, 0, home_exp_gf, away_exp_gf)
+		away_win_chance = self.win_chance_calc(0, 0, away_exp_gf, home_exp_gf)
+		return (home_win_chance, tie_chance, away_win_chance)
+	
 	def basic_model_calc(self, date = None):
 		gtk.gdk.threads_enter()
 		league_home_gf = self.parent.table_note.fetch_home_goals(date)
@@ -1500,7 +1498,7 @@ class Model_Notebook:
 			team_gp[team[0]] = float(self.parent.table_note.fetch_gp(int(team[0]), date))
 		gtk.gdk.threads_leave()
 
-		self.parent.cur.execute("SELECT home_id, away_id FROM games WHERE (season_id = '" + str(season_id) + "' AND (date > '" + date + "' OR played = 'FALSE'))")
+		self.parent.cur.execute("SELECT home_id, away_id, date FROM games WHERE (season_id = '" + str(season_id) + "' AND (date > '" + date + "' OR played = 'FALSE'))")
 
 		game_arr = self.parent.cur.fetchall()
 		for game in game_arr:
@@ -1716,6 +1714,162 @@ class Results_Notebook:
 				team_row.append("")
 			all_list.append(team_row)
 
+class Guru_Notebook:
+	def __init__(self, parent):
+		self.parent = parent
+
+		self.cal_hbox = gtk.HBox(spacing=10)
+		self.cal_hbox.set_border_width(5)
+		self.parent.guru_note_vbox.pack_start(self.cal_hbox, expand = False)		
+
+		self.start_vbox = gtk.VBox(spacing=10)
+		self.start_vbox.set_border_width(5)
+		self.cal_hbox.pack_start(self.start_vbox, expand = False)
+
+		self.start_label = gtk.Label("Start date:")
+		self.start_vbox.pack_start(self.start_label)
+
+		self.start_cal = gtk.Calendar()
+		self.start_vbox.pack_start(self.start_cal, expand = False)
+
+		self.end_vbox = gtk.VBox(spacing=10)
+		self.end_vbox.set_border_width(5)
+		self.cal_hbox.pack_start(self.end_vbox, expand = False)
+
+		self.end_label = gtk.Label("End date:")
+		self.end_vbox.pack_start(self.end_label)
+
+		self.end_cal = gtk.Calendar()
+		self.end_vbox.pack_end(self.end_cal, expand = False)
+
+
+		season_id = self.parent.season_combo.get_id()
+
+		self.parent.cur.execute("SELECT STRFTIME('%Y',start), STRFTIME('%m',start), STRFTIME('%d',start), STRFTIME('%Y',end), STRFTIME('%m',end), STRFTIME('%d',end) FROM seasons WHERE id = '" + str(season_id) + "'")
+		row = self.parent.cur.fetchone()
+		if row != None:
+			datetime_start_season = datetime.date(int(row[0]), int(row[1]), int(row[2]))
+			datetime_end_season = datetime.date(int(row[3]), int(row[4]), int(row[5]))
+			datetime_today = datetime.date.today()
+			if datetime_today < datetime_start_season or datetime_today > datetime_end_season:
+				datetime_start_range = datetime_start_season
+			else:
+				datetime_start_range = datetime_today
+			datetime_end_range = datetime_start_range + datetime.timedelta(7)
+			
+			self.start_cal.select_month(datetime_start_range.month-1, datetime_start_range.year)
+			self.start_cal.select_day(datetime_start_range.day)
+
+			self.end_cal.select_month(datetime_end_range.month-1, datetime_end_range.year)
+			self.end_cal.select_day(datetime_end_range.day)
+
+		scrolled_window = gtk.ScrolledWindow()
+		scrolled_window.set_policy(gtk.POLICY_NEVER, gtk.POLICY_AUTOMATIC)
+		self.parent.guru_note_vbox.pack_start(scrolled_window)
+
+		list_store = gtk.ListStore(gobject.TYPE_STRING,		# Date
+						gobject.TYPE_STRING,	# Home Team
+						gobject.TYPE_STRING,	# Away Team
+						gobject.TYPE_FLOAT,	# Home Win %
+						gobject.TYPE_FLOAT,	# Tie %
+						gobject.TYPE_FLOAT,	# Away Win %
+						gobject.TYPE_STRING,	# Most Likely Result
+						gobject.TYPE_STRING,	# NASL Guru Result
+						gobject.TYPE_FLOAT)	# NASL Guru Expected Points
+
+		self.all_view = gtk.TreeView()
+		scrolled_window.add(self.all_view)
+		self.all_view.set_model(list_store)
+
+		column = gtk.TreeViewColumn("Date", gtk.CellRendererText(), text=0)
+		column.set_sort_column_id(0)
+		self.all_view.append_column(column)
+
+		column = gtk.TreeViewColumn("Home", gtk.CellRendererText(), text=1)
+		column.set_sort_column_id(1)
+		self.all_view.append_column(column)
+
+		column = gtk.TreeViewColumn("Away", gtk.CellRendererText(), text=2)
+		column.set_sort_column_id(2)
+		self.all_view.append_column(column)
+
+		column = gtk.TreeViewColumn("Home Win %", gtk.CellRendererText(), text=3)
+		column.set_sort_column_id(3)
+		self.all_view.append_column(column)
+
+		column = gtk.TreeViewColumn("Tie %", gtk.CellRendererText(), text=4)
+		column.set_sort_column_id(4)
+		self.all_view.append_column(column)
+
+		column = gtk.TreeViewColumn("Away Win %", gtk.CellRendererText(), text=5)
+		column.set_sort_column_id(5)
+		self.all_view.append_column(column)
+
+		column = gtk.TreeViewColumn("Most Likely Result", gtk.CellRendererText(), text=6)
+		column.set_sort_column_id(6)
+		self.all_view.append_column(column)
+
+		column = gtk.TreeViewColumn("Guru Best Result", gtk.CellRendererText(), text=7)
+		column.set_sort_column_id(7)
+		self.all_view.append_column(column)
+
+		column = gtk.TreeViewColumn("Guru Expected Points", gtk.CellRendererText(), text=8)
+		column.set_sort_column_id(8)
+		self.all_view.append_column(column)
+
+		self.recalc_button = gtk.Button("Recalculate")
+		self.parent.guru_note_vbox.pack_start(self.recalc_button, expand = False)
+		self.recalc_button.connect('clicked', self.repop)
+
+	def repop(self, button):
+		start_date = self.start_cal.get_date()
+		end_date = self.end_cal.get_date()
+		all_list = self.all_view.get_model()
+		all_list.clear()
+
+		start_date_str = str(start_date[0]) + "-" + str(start_date[1]+1).zfill(2) + "-" + str(start_date[2]).zfill(2)
+		end_date_str = str(end_date[0]) + "-" + str(end_date[1]+1).zfill(2) + "-" + str(end_date[2]).zfill(2)
+		league_home_gf = self.parent.table_note.fetch_home_goals(start_date_str)
+		league_away_gf = self.parent.table_note.fetch_away_goals(start_date_str)
+		if(league_away_gf != 0):
+			hfa_adj = math.sqrt(float(league_home_gf) / float(league_away_gf))
+		else:
+			hfa_adj = 1.0
+
+		if(hfa_adj == 0):
+			hfa_adj = 0.01
+
+
+		season_id = self.parent.season_combo.get_id()
+
+		self.parent.cur.execute("SELECT home_id, away_id, date FROM games WHERE (season_id = '" + str(season_id) + "' AND date >= DATE('" + start_date_str + "') AND date <= DATE('" + end_date_str + "')) ORDER BY date")
+		for row in self.parent.cur.fetchall():
+			(home_name, home_city, home_abbr, home_id) = get_team_from_id(self.parent.cur, row[0])
+			(away_name, away_city, away_abbr, away_id) = get_team_from_id(self.parent.cur, row[1])
+
+			if home_abbr == None:
+				home_abbr = " "
+			if away_abbr == None:
+				away_abbr = " "
+
+			text = row[2] + " " + home_abbr + "-" + away_abbr
+			print text
+
+			home_gf = float(self.parent.table_note.fetch_gf(int(row[0]), start_date_str))
+			home_ga = float(self.parent.table_note.fetch_ga(int(row[0]), start_date_str))
+			home_gp = float(self.parent.table_note.fetch_gp(int(row[0]), start_date_str))
+
+			away_gf = float(self.parent.table_note.fetch_gf(int(row[1]), start_date_str))
+			away_ga = float(self.parent.table_note.fetch_ga(int(row[1]), start_date_str))
+			away_gp = float(self.parent.table_note.fetch_gp(int(row[1]), start_date_str))
+
+			home_exp_gf = self.parent.model_note.basic_model_exp_goals_cal(home_gf, away_ga, home_gp, away_gp, hfa_adj)
+			away_exp_gf = self.parent.model_note.basic_model_exp_goals_cal(away_gf, home_ga, away_gp, home_gp, 1/hfa_adj)
+			(home_win_chance, tie_chance, away_win_chance) = self.parent.model_note.basic_model_game_calc(home_exp_gf, away_exp_gf)
+			print str(home_win_chance),str(tie_chance),str(away_win_chance)
+			all_list.append((row[2], home_abbr, away_abbr, home_win_chance*100, tie_chance*100, away_win_chance*100, "", "", 0.0))
+
+
 class Base:
 	def __init__(self):
 		gtk.gdk.threads_init()
@@ -1845,6 +1999,11 @@ class Base:
 		self.results_note_vbox.set_border_width(5)
 		self.notebook.append_page(self.results_note_vbox, gtk.Label("Results"))
 		self.results_note = Results_Notebook(self)
+
+		self.guru_note_vbox = gtk.VBox(spacing=10)
+		self.guru_note_vbox.set_border_width(5)
+		self.notebook.append_page(self.guru_note_vbox, gtk.Label("Guru"))
+		self.guru_note = Guru_Notebook(self)
 
 		#### Update the combo boxes so the notebooks show the right data ####
 		self.league_combo.update(self.league_combo.combo)
