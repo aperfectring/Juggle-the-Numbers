@@ -1764,7 +1764,7 @@ class Guru_Notebook:
 			self.end_cal.select_day(datetime_end_range.day)
 
 		scrolled_window = gtk.ScrolledWindow()
-		scrolled_window.set_policy(gtk.POLICY_NEVER, gtk.POLICY_AUTOMATIC)
+		scrolled_window.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
 		self.parent.guru_note_vbox.pack_start(scrolled_window)
 
 		list_store = gtk.ListStore(gobject.TYPE_STRING,		# Date
@@ -1774,8 +1774,12 @@ class Guru_Notebook:
 						gobject.TYPE_FLOAT,	# Tie %
 						gobject.TYPE_FLOAT,	# Away Win %
 						gobject.TYPE_STRING,	# Most Likely Result
-						gobject.TYPE_STRING,	# NASL Guru Result
-						gobject.TYPE_FLOAT)	# NASL Guru Expected Points
+						gobject.TYPE_STRING,	# NASL Guru Result Home Win
+						gobject.TYPE_FLOAT,	# NASL Guru Expected Points Home Win
+						gobject.TYPE_STRING,	# NASL Guru Result Away Win
+						gobject.TYPE_FLOAT,	# NASL Guru Expected Points Away Win
+						gobject.TYPE_STRING,	# NASL Guru Result Tie
+						gobject.TYPE_FLOAT)	# NASL Guru Expected Points Tie
 
 		self.all_view = gtk.TreeView()
 		scrolled_window.add(self.all_view)
@@ -1809,12 +1813,28 @@ class Guru_Notebook:
 		column.set_sort_column_id(6)
 		self.all_view.append_column(column)
 
-		column = gtk.TreeViewColumn("Guru Best Result", gtk.CellRendererText(), text=7)
+		column = gtk.TreeViewColumn("Guru\nBest Result\nHome Win", gtk.CellRendererText(), text=7)
 		column.set_sort_column_id(7)
 		self.all_view.append_column(column)
 
-		column = gtk.TreeViewColumn("Guru Expected Points", gtk.CellRendererText(), text=8)
+		column = gtk.TreeViewColumn("Guru\nExpected Points\nHome Win", gtk.CellRendererText(), text=8)
 		column.set_sort_column_id(8)
+		self.all_view.append_column(column)
+
+		column = gtk.TreeViewColumn("Guru\nBest Result\nAway Win", gtk.CellRendererText(), text=9)
+		column.set_sort_column_id(9)
+		self.all_view.append_column(column)
+
+		column = gtk.TreeViewColumn("Guru\nExpected Points\nAway Win", gtk.CellRendererText(), text=10)
+		column.set_sort_column_id(10)
+		self.all_view.append_column(column)
+
+		column = gtk.TreeViewColumn("Guru\nBest Result\nTie", gtk.CellRendererText(), text=11)
+		column.set_sort_column_id(11)
+		self.all_view.append_column(column)
+
+		column = gtk.TreeViewColumn("Guru\nExpected Points\nTie", gtk.CellRendererText(), text=12)
+		column.set_sort_column_id(12)
 		self.all_view.append_column(column)
 
 		self.recalc_button = gtk.Button("Recalculate")
@@ -1853,7 +1873,6 @@ class Guru_Notebook:
 				away_abbr = " "
 
 			text = row[2] + " " + home_abbr + "-" + away_abbr
-			print text
 
 			home_gf = float(self.parent.table_note.fetch_gf(int(row[0]), start_date_str))
 			home_ga = float(self.parent.table_note.fetch_ga(int(row[0]), start_date_str))
@@ -1866,9 +1885,67 @@ class Guru_Notebook:
 			home_exp_gf = self.parent.model_note.basic_model_exp_goals_cal(home_gf, away_ga, home_gp, away_gp, hfa_adj)
 			away_exp_gf = self.parent.model_note.basic_model_exp_goals_cal(away_gf, home_ga, away_gp, home_gp, 1/hfa_adj)
 			(home_win_chance, tie_chance, away_win_chance) = self.parent.model_note.basic_model_game_calc(home_exp_gf, away_exp_gf)
-			print str(home_win_chance),str(tie_chance),str(away_win_chance)
-			all_list.append((row[2], home_abbr, away_abbr, home_win_chance*100, tie_chance*100, away_win_chance*100, "", "", 0.0))
 
+			goal_prob = []
+			index = 0
+			goal_calc = poisson_pmf(index, home_exp_gf)
+			prev_goal_calc = goal_calc
+			goal_prob.append(goal_calc)
+			while prev_goal_calc <= goal_calc:
+				prev_goal_calc = goal_calc
+				index = index + 1
+				goal_calc = poisson_pmf(index, home_exp_gf)
+			
+			home_max_prob = index - 1
+
+			goal_prob = []
+			index = 0
+			goal_calc = poisson_pmf(index, away_exp_gf)
+			prev_goal_calc = goal_calc
+			goal_prob.append(goal_calc)
+			while prev_goal_calc <= goal_calc:
+				prev_goal_calc = goal_calc
+				index = index + 1
+				goal_calc = poisson_pmf(index, away_exp_gf)
+
+			away_max_prob = index - 1
+
+			max_prob_str = str(home_max_prob) + " - " + str(away_max_prob)
+
+			exp_guru_pts_home = []
+			exp_guru_pts_tie = []
+			exp_guru_pts_away = []
+			for home_goals in range(0,10):
+				exp_guru_pts_home.append([])
+				exp_guru_pts_tie.append([])
+				exp_guru_pts_away.append([])
+				for away_goals in range(0,10):
+					exp_guru_pts_home[home_goals].append(0.0)
+					exp_guru_pts_tie[home_goals].append(0.0)
+					exp_guru_pts_away[home_goals].append(0.0)
+					if home_goals == away_goals:
+						exp_guru_pts_tie[home_goals][away_goals] += 2 * tie_chance + poisson_pmf(home_goals, home_exp_gf) + poisson_pmf(away_goals, away_exp_gf)
+					elif home_goals > away_goals:
+						exp_guru_pts_home[home_goals][away_goals] += 2 * home_win_chance + poisson_pmf(home_goals, home_exp_gf) + poisson_pmf(away_goals, away_exp_gf)
+					else:
+						exp_guru_pts_away[home_goals][away_goals] += 2 * away_win_chance + poisson_pmf(home_goals, home_exp_gf) + poisson_pmf(away_goals, away_exp_gf)
+			max_exp_guru_pts_home = [max(exp_guru_pts_home[x]) for x in range(10)]
+			max_exp_guru_pts_away = [max(exp_guru_pts_away[x]) for x in range(10)]
+			max_exp_guru_pts_tie  = [max(exp_guru_pts_tie[x])  for x in range(10)]
+
+			max_exp_guru_pts_home_hg = max_exp_guru_pts_home.index(max(max_exp_guru_pts_home))
+			max_exp_guru_pts_home_ag = exp_guru_pts_home[max_exp_guru_pts_home_hg].index(max(exp_guru_pts_home[max_exp_guru_pts_home_hg]))
+			max_exp_guru_pts_home_str = str(max_exp_guru_pts_home_hg) + " - " + str(max_exp_guru_pts_home_ag)
+
+			max_exp_guru_pts_tie_hg = max_exp_guru_pts_tie.index(max(max_exp_guru_pts_tie))
+			max_exp_guru_pts_tie_ag = exp_guru_pts_tie[max_exp_guru_pts_tie_hg].index(max(exp_guru_pts_tie[max_exp_guru_pts_tie_hg]))
+			max_exp_guru_pts_tie_str = str(max_exp_guru_pts_tie_hg) + " - " + str(max_exp_guru_pts_tie_ag)
+
+			max_exp_guru_pts_away_hg = max_exp_guru_pts_away.index(max(max_exp_guru_pts_away))
+			max_exp_guru_pts_away_ag = exp_guru_pts_away[max_exp_guru_pts_away_hg].index(max(exp_guru_pts_away[max_exp_guru_pts_away_hg]))
+			max_exp_guru_pts_away_str = str(max_exp_guru_pts_away_hg) + " - " + str(max_exp_guru_pts_away_ag)
+
+			all_list.append((row[2], home_abbr, away_abbr, home_win_chance*100, tie_chance*100, away_win_chance*100, max_prob_str, max_exp_guru_pts_home_str, max(max_exp_guru_pts_home), max_exp_guru_pts_away_str, max(max_exp_guru_pts_away), max_exp_guru_pts_tie_str, max(max_exp_guru_pts_tie)))
 
 class Base:
 	def __init__(self):
