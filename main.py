@@ -11,6 +11,7 @@ import datetime
 import math
 import threading
 
+### Gets team information tuple based on the team_id number
 def get_team_from_id(cur, myid):
 	cur.execute("SELECT team_name, city, abbr FROM teams WHERE id = '" + str(myid) + "'")
 	name = None
@@ -23,6 +24,7 @@ def get_team_from_id(cur, myid):
 			abbr = row[2]
 	return (name, city, abbr, myid)
 
+### Gets team information tuple based on the team name
 def get_team_from_name(cur, name):
 	cur.execute("SELECT city, id, abbr FROM teams WHERE team_name = '" + name + "'")
 	city = None
@@ -35,6 +37,7 @@ def get_team_from_name(cur, name):
 			abbr = row[2]
 	return (name, city, abbr, myid)
 
+### The standard array of different types of game format.
 style_text_array = [
 		"Standard format",
 		"AET and PKs format",
@@ -43,12 +46,14 @@ style_text_array = [
 		"Home+Away Game 2 format"
 		]
 
+### Calculate the Poisson distribution CDF for given values of k and lambda
 def poisson_cdf(k, lamb):
 	pois_sum = 0
 	for i in range(0,k+1):
 		pois_sum += poisson_pmf(i, lamb)
 	return pois_sum
 
+### Calculate the Poisson distribution PMF for given values of k and lambda
 def poisson_pmf(k, lamb):
 	return math.pow(lamb, k) / math.factorial(k) * math.exp(-lamb)
 
@@ -148,6 +153,7 @@ class League_Notebook:
 	def __init__(self, parent):
 		self.parent = parent
 
+		### Create and add all of the widgets for the notebook page.
 		self.name_hbox = gtk.HBox(spacing=10)
 		self.name_hbox.set_border_width(5)
 		self.parent.league_note_vbox.pack_start(self.name_hbox, expand=False)
@@ -403,17 +409,76 @@ class Season_Notebook:
 
 		self.parent.season_combo.repop(new_name)
 
+	### Update the start date calendar with the appropriate year, month, and day
 	def set_start(self, year = None, month = None, day = None):
 		if (month != None) and (year != None):
 			self.start_cal.select_month(int(month)-1, int(year))
 			if(day != None):
 				self.start_cal.select_day(int(day))
 
+	### Update the end date calendar with the appropriate year, month, and day
 	def set_end(self, year = None, month = None, day = None):
 		if (month != None) and (year != None):
 			self.end_cal.select_month(int(month)-1, int(year))
 			if(day != None):
 				self.end_cal.select_day(int(day))
+
+class Conference_Combo:
+	def __init__(self, parent):
+		self.parent = parent
+		self.label = gtk.Label("Conference:")
+		self.parent.conference_vbox.add(self.label)
+
+		self.combo = gtk.combo_box_new_text()
+		self.repop()
+		self.parent.conference_vbox.add(self.combo)
+		self.combo.connect('changed', self.update)
+
+	### Update the combo box with the appropriate conferences for the current league/season
+	def repop(self):
+		season_id = self.parent.season_combo.get_id()
+		model = self.combo.get_model()
+		for index in range(0, len(model)):
+			self.combo.remove_text(0)
+
+		self.combo.append_text("Whole League")
+
+		self.parent.cur.execute("SELECT conf_id FROM season_confs WHERE season_id = '" + str(season_id) + "'")
+		for row in self.parent.cur.fetchall():
+			self.parent.cur.execute("SELECT conf_name FROM confs WHERE conf_id = '" + str(row[0]) + "'")
+			conf_name = self.parent.cur.fetchone()
+			if conf_name != None:
+				self.combo.append_text(conf_name[0])
+
+		self.combo.set_active(0)
+
+	### Callback which triggers the recalculation of other widgets when the combo box is changed.
+	def update(self):
+		self.parent.table_note.repop()
+		if hasattr(self.parent, "results_note"):
+			self.parent.results_note.repop()
+		self.parent.model_note.clear()
+		if hasattr(self.parent, "notebook"):
+			if self.parent.notebook.get_current_page() != -1:
+				self.parent.model_note.do_recalc(self.parent.notebook, 0, self.parent.notebook.get_current_page())
+
+	### Fetch the unique ID of the currently selected conference
+	def get_id(self):
+		model = self.combo.get_model()
+		index = self.combo.get_active()
+		if index < 0:
+			return None
+		conf_text = model[index][0]
+
+		if conf_text == "Whole League":
+			return None
+
+		self.parent.cur.execute("SELECT conf_id FROM confs WHERE conf_name = '" + str(conf_text) + "'")
+		row = self.parent.cur.fetchone()
+		if row != None:
+			return row[0]
+		return None
+
 
 class Teams_Notebook:
 	def __init__(self, parent):
@@ -423,6 +488,8 @@ class Teams_Notebook:
 		self.list_hbox.set_border_width(5)
 		self.parent.teams_note_vbox.pack_start(self.list_hbox)
 
+
+		### Widgets for handling the "all teams" section of the window
 		all_list_vbox = gtk.VBox(spacing=10)
 		all_list_vbox.set_border_width(5)
 		self.list_hbox.pack_start(all_list_vbox)
@@ -453,6 +520,9 @@ class Teams_Notebook:
 		self.all_team_del_button.connect('clicked', self.delete_team, self.all_view)
 
 
+
+		### Widgets for moving a team between the "all teams" and the "league teams"
+		###   sections of the window.
 		self.buttons_vbox = gtk.VBox(spacing=10)
 		self.buttons_vbox.set_border_width(5)
 		self.list_hbox.pack_start(self.buttons_vbox, expand=False)
@@ -464,6 +534,9 @@ class Teams_Notebook:
 		self.add_button.connect('clicked', self.add_team)
 		self.remove_button.connect('clicked', self.remove_team)
 
+
+
+		### Widgets for handling the "league teams" section of the window.
 		league_list_vbox = gtk.VBox(spacing=10)
 		league_list_vbox.set_border_width(5)
 		self.list_hbox.pack_start(league_list_vbox)
@@ -493,6 +566,9 @@ class Teams_Notebook:
 		league_list_hbox.add(self.league_team_del_button)
 		self.league_team_del_button.connect('clicked', self.delete_team, self.league_view)
 
+
+
+
 		self.teamops_hbox = gtk.HBox(spacing=10)
 		self.teamops_hbox.set_border_width(5)
 		self.parent.teams_note_vbox.pack_end(self.teamops_hbox, expand=False)
@@ -503,6 +579,7 @@ class Teams_Notebook:
 
 		self.repop()
 
+	### Fill the team lists with all teams
 	def repop(self):
 		sid = self.parent.season_combo.get_id()
 		all_list = self.all_view.get_model()
@@ -520,6 +597,7 @@ class Teams_Notebook:
 				else:
 					all_list.append([row[0]])
 
+	### Get the team tuple from the provided view
 	def get_team(self, view):
 		all_list = view.get_model()
 		if view.get_cursor()[0]:
@@ -530,18 +608,21 @@ class Teams_Notebook:
 			return get_team_from_name(self.parent.cur, name)
 		return (None, None, None, None)
 
+	### Move a team to the "league teams" list
 	def add_team(self, button):
 		(name, city, abbr, myid) = self.get_team(self.all_view)
 		self.parent.cur.execute("INSERT INTO team_season (team_id, season_id) VALUES ('" + str(myid) + "', '" + str(self.parent.season_combo.get_id()) + "')")
 		self.parent.db.commit()
 		self.repop()
 
+	### Remove a team from the "league teams" list
 	def remove_team(self, button):
 		(name, city, abbr, myid) = self.get_team(self.league_view)
 		self.parent.cur.execute("DELETE FROM team_season WHERE (team_id='" + str(myid) + "' AND season_id='" + str(self.parent.season_combo.get_id()) + "')")
 		self.parent.db.commit()
 		self.repop()
 
+	### Delete all references to the selected team from the DB
 	def delete_team(self, button, view):
 		if view == None:
 			return
@@ -557,7 +638,9 @@ class Teams_Notebook:
 		self.parent.db.commit()
 		self.repop()
 
+	### Create/edit the details of a team
 	def edit_team(self, button, view):
+		# Determine if we are editing an already existing team, or creating a new one
 		if button.get_label() == "Edit team":
 			edit = True
 		else:
@@ -567,10 +650,12 @@ class Teams_Notebook:
 			return
 
 		all_list = view.get_model()
+		# If we are editing a team, get the details of the current team
 		if edit == True:
 			(name, city, abbr, myid) = self.get_team(view)
 
 
+		# Create a dialog window to prompt the user for new information.
 		dialog = gtk.Dialog("Edit Team",
 				    self.parent.window,
 				    gtk.DIALOG_MODAL | gtk.DIALOG_DESTROY_WITH_PARENT,
@@ -610,6 +695,8 @@ class Teams_Notebook:
 		abbr_entry.show()
 		abbr_hbox.pack_start(abbr_entry)
 
+		# If we are editing a team, update the widgets to have the current
+		#   information for that team
 		if edit == True:
 			name_entry.set_text(name)
 			city_entry.set_text(city)
@@ -727,6 +814,7 @@ class Games_Notebook:
 
 		self.repop()
 
+	### Update the treeview with all games pertaining to the specified league/season
 	def repop(self):
 		sid = self.parent.season_combo.get_id()
 		all_list = self.all_view.get_model()
@@ -756,6 +844,7 @@ class Games_Notebook:
 			if self.parent.notebook.get_current_page() != -1:
 				self.parent.model_note.do_recalc(self.parent.notebook, 0, self.parent.notebook.get_current_page())
 
+	### Get the game information tuple from the treeview
 	def get_game(self, view):
 		all_list = view.get_model()
 		if view.get_cursor()[0]:
@@ -787,6 +876,7 @@ class Games_Notebook:
 				away, away_goals, away_pks,
 				aet, pks, style, played)
 
+	### Add the appropriate teams (from the team_season table) to the specified combo box.
 	def pop_team_combo(self, combo):
 		row = None
 		self.parent.cur.execute("SELECT team_id FROM team_season WHERE (season_id='" + str(self.parent.season_combo.get_id()) + "')")
@@ -797,11 +887,13 @@ class Games_Notebook:
 		if row:
 			combo.set_active(0)
 
+	### Delete the specified game
 	def delete_game_by_id(self, game_id):
 		self.parent.cur.execute("DELETE FROM games WHERE (id = '" + str(game_id) + "')")
 		self.parent.db.commit()
 		
 
+	### Delete the game selected in the treeview
 	def delete_game(self, button):
 		all_list = self.all_view.get_model()
 		(date,
@@ -825,13 +917,16 @@ class Games_Notebook:
 		self.repop()
 
 
+	### Add a new game, or edit an already existing game
 	def edit_game(self, button):
+		# Determine if we are editing, or adding, a game
 		if button.get_label() == "Edit game":
 			edit = True
 		else:
 			edit = False
 
 		all_list = self.all_view.get_model()
+		# If editing, try to fetch the appropriate game information
 		if edit == True:
 			(date,
 				home, home_goals, home_pks,
@@ -841,6 +936,7 @@ class Games_Notebook:
 				edit = False
 
 
+		# Create a dialog window to query the user for the game information
 		dialog = gtk.Dialog("Edit Game",
 				    self.parent.window,
 				    gtk.DIALOG_MODAL | gtk.DIALOG_DESTROY_WITH_PARENT,
@@ -957,6 +1053,7 @@ class Games_Notebook:
 
 		###### Populate the widgets with the retrieved data
 		if edit == True:
+			# If editing, populate with the original data
 			datetime_obj = datetime.datetime.strptime(date, "%Y-%m-%d")
 			date_cal.select_month(datetime_obj.month - 1, datetime_obj.year)
 			date_cal.select_day(datetime_obj.day)
@@ -982,7 +1079,9 @@ class Games_Notebook:
 				if model[index][0] == style:
 					style_combo.set_active(index)
 		else:
-			## Get the latest date of a game in the list
+			## If we are adding a game, get the latest date of a game in the list to
+			##   provide a relavent starting date.  If no games exist, use the start
+			##   date of the season.
 			self.parent.cur.execute("SELECT date FROM games WHERE season_id = '" + season_id_text + "' ORDER BY date DESC")
 			this_val = self.parent.cur.fetchone()
 			if this_val != None:
@@ -997,6 +1096,7 @@ class Games_Notebook:
 
 		response = dialog.run()
 		if response == gtk.RESPONSE_ACCEPT:
+			### Get all of the updated game info from the many widgets
 			newdate = date_cal.get_date()
 			date_text = str(newdate[0]) + "-" + str(newdate[1]+1).zfill(2) + "-" + str(newdate[2]).zfill(2)
 			model = home_combo.get_model()
@@ -1023,6 +1123,8 @@ class Games_Notebook:
 			away_id_text = str(away_id)
 
 
+			### Only allow data modification if the home and away teams differ.
+			### Update if we are editing, otherwise create a new game
 			if home_text != away_text:
 				if edit == True:
 					(home, orig_home_city_text, orig_home_abbr_text, orig_home_id) = get_team_from_name(self.parent.cur, home)
@@ -1067,17 +1169,6 @@ class Games_Notebook:
 
 				self.parent.db.commit()
 				self.repop()
-
-		#	if name_entry.get_text() != "":
-		#		if edit == True:
-		#			self.parent.cur.execute("UPDATE teams " + 
-		#			                           "SET team_name = '" + name_entry.get_text() + "', " + 
-		#			                              "city = '" + city_entry.get_text() + "' " + 
-		#			                           "WHERE team_name = '" + name + "'")
-		#		else:
-		#			self.parent.cur.execute("INSERT INTO teams (team_name, city) " + 
-		#			                           "VALUES ('" + name_entry.get_text() + "', '" +
-		#			                              city_entry.get_text() + "')")
 
 
 		dialog.destroy()
@@ -1152,6 +1243,7 @@ class Table_Notebook:
 
 		self.repop()
 
+	### Repopulate the table from the DB
 	def repop(self):
 		season_id = self.parent.season_combo.get_id()
 
@@ -1175,6 +1267,7 @@ class Table_Notebook:
 
 			all_list.append( (team_name, games_played, num_won, num_lost, num_tied, goals_scored, goals_against, goals_scored - goals_against, goal_ratio, 3*num_won + num_tied) )
 
+	### Fetch the games played by the team up to and including the specified date
 	def fetch_gp(self, team, date = None):
 		if date == None:
 			date_today = datetime.date.today()
@@ -1184,6 +1277,7 @@ class Table_Notebook:
 		games_played = self.parent.cur.fetchone()[0]
 		return games_played
 
+	### Fetch the ties by the team up to and including the specified date
 	def fetch_ties(self, team, date = None):
 		if date == None:
 			date_today = datetime.date.today()
@@ -1193,6 +1287,7 @@ class Table_Notebook:
 		num_tied = self.parent.cur.fetchone()[0]
 		return num_tied
 
+	### Fetch the wins by the team up to and including the specified date
 	def fetch_wins(self, team, date = None):
 		if date == None:
 			date_today = datetime.date.today()
@@ -1202,6 +1297,7 @@ class Table_Notebook:
 		num_won = self.parent.cur.fetchone()[0]
 		return num_won
 
+	### Fetch the losses by the team up to and including the specified date
 	def fetch_loss(self, team, date = None):
 		if date == None:
 			date_today = datetime.date.today()
@@ -1211,11 +1307,13 @@ class Table_Notebook:
 		num_lost = self.parent.cur.fetchone()[0]
 		return num_lost
 
+	### Fetch the points earned by the team up to and including the specified date
 	def fetch_pts(self, team, date = None):
 		num_tied = self.fetch_ties(team, date)
 		num_won = self.fetch_wins(team, date)
 		return (3 * num_won + num_tied)
 
+	### Fetch the goals scored by the team up to and including the specified date
 	def fetch_gf(self, team, date = None):
 		if date == None:
 			date_today = datetime.date.today()
@@ -1232,6 +1330,7 @@ class Table_Notebook:
 			goals_scored += goal_row[0]
 		return goals_scored
 
+	### Fetch the goals against the team up to and including the specified date
 	def fetch_ga(self, team, date = None):
 		if date == None:
 			date_today = datetime.date.today()
@@ -1248,6 +1347,7 @@ class Table_Notebook:
 			goals_against += goal_row[0]
 		return goals_against
 
+	### Fetch the goals scored by home teams up to and including the specified date
 	def fetch_home_goals(self, date = None):
 		if date == None:
 			date_today = datetime.date.today()
@@ -1260,6 +1360,7 @@ class Table_Notebook:
 			goals = goal_row[0]
 		return goals
 
+	### Fetch the goals scored by away teams up to and including the specified date
 	def fetch_away_goals(self, date = None):
 		if date == None:
 			date_today = datetime.date.today()
@@ -1316,6 +1417,7 @@ class Model_Notebook:
 
 		self.thread_sig = threading.Event()
 
+	### Export the table+models in the format expected by the JuggleTheNumbers website
 	def export_text(self, button):
 		model = self.parent.league_combo.combo.get_model()
 		index = self.parent.league_combo.combo.get_active()
@@ -1355,6 +1457,7 @@ class Model_Notebook:
 		f.write("</script>\n")
 		f.close()
 
+	### Fetch the basic model value for the team specified
 	def fetch_basic(self, name):
 		all_model = self.all_view.get_model()
 		myiter = all_model.get_iter_first()
@@ -1364,6 +1467,7 @@ class Model_Notebook:
 			myiter = all_model.iter_next(myiter)
 		return None
 		
+	### Fetch the EAP model value for the team specified
 	def fetch_eap(self, name):
 		all_model = self.all_view.get_model()
 		myiter = all_model.get_iter_first()
@@ -1374,9 +1478,11 @@ class Model_Notebook:
 		return None
 		
 
+	### Clear the model table.
 	def clear(self):
 		self.all_view.get_model().clear()
 
+	### Restart the calculation thread.  Kill any previously started threads before starting a new one.
 	def kick_thread(self):
 		if self.calc_thread.is_alive():
 			self.thread_sig.set()
@@ -1385,12 +1491,13 @@ class Model_Notebook:
 		self.calc_thread = threading.Thread(target=self.repop)
 		self.calc_thread.start()
 		
-
+	### Callback from the notebook to kick off the model calculation
 	def do_recalc(self, notebook, page_NOUSE, page_num):
 		if notebook.get_tab_label(notebook.get_nth_page(page_num)).get_text() == "Model":
 			kickthr = threading.Thread(target=self.kick_thread)
 			kickthr.start()
 
+	### Recalculate the models for all teams
 	def repop(self):
 		gtk.gdk.threads_enter()
 		self.calc_progress.set_fraction(0)
@@ -1400,16 +1507,9 @@ class Model_Notebook:
 		if self.thread_sig.wait(0.01):
 			return
 		eap_ppg = self.eap_model_calc()
-#		if self.thread_sig.is_set():
 		if self.thread_sig.wait(0.01):
 			return
 
-#		basic_pts_new = self.basic_model_calc()
-
-#		summ = 0
-#		for key in basic_pts.keys():
-#			summ += math.pow(basic_pts[key] - basic_pts_new[key],2)
-#		print "Avg:",math.sqrt(summ/len(basic_pts))
 
 		gtk.gdk.threads_enter()
 		season_id = self.parent.season_combo.get_id()
@@ -1429,6 +1529,10 @@ class Model_Notebook:
 		gtk.gdk.threads_leave()
 
 
+	### Calculate the chance that a team will win a game based on expected goals.
+	###   This function can also calculate the probability of a team winning the aggregate given
+	###   x and y goals were scored previously, where x and y are the goals scored by the team
+	###   and their opposition in prior games of the set.
 	def win_chance_calc(self, team_goals_base, opp_goals_base, team_exp_gf, opp_exp_gf):
 		team_goals_adj = opp_goals_base - min(team_goals_base, opp_goals_base)
 		opp_goals_adj = team_goals_base - min(team_goals_base, opp_goals_base)
@@ -1442,6 +1546,10 @@ class Model_Notebook:
 
 		return win_chance
 
+	### Calculate the chance that a team will tie a game based on expected goals.
+	###   This function can also calculate the probability of a team tying the aggregate given
+	###   x and y goals were scored previously, where x and y are the goals scored by the team
+	###   and their opposition in prior games of the set.
 	def tie_chance_calc(self, team_goals_base, opp_goals_base, team_exp_gf, opp_exp_gf):
 		team_goals_adj = opp_goals_base - min(team_goals_base, opp_goals_base)
 		opp_goals_adj = team_goals_base - min(team_goals_base, opp_goals_base)
@@ -1452,23 +1560,27 @@ class Model_Notebook:
 
 		return tie_chance
 
+	### Calculates the expected goals from basic stats.
 	def basic_model_exp_goals_cal(self, home_gf, away_ga, home_gp, away_gp, hfa_adj):
 		if(home_gp == 0) or (away_gp == 0):
 			return 0.0
 		return (home_gf + away_ga) / (home_gp + away_gp) * hfa_adj
 
+	### Calculates the basic model results for a single game (used by other widgets)
 	def basic_model_game_calc(self, home_exp_gf, away_exp_gf):
 		tie_chance = self.tie_chance_calc(0, 0, home_exp_gf, away_exp_gf)
 		home_win_chance = self.win_chance_calc(0, 0, home_exp_gf, away_exp_gf)
 		away_win_chance = self.win_chance_calc(0, 0, away_exp_gf, home_exp_gf)
 		return (home_win_chance, tie_chance, away_win_chance)
 	
+	### Calculates the basic model for all unplayed games, and all games after the specified date
 	def basic_model_calc(self, date = None):
 		gtk.gdk.threads_enter()
 		league_home_gf = self.parent.table_note.fetch_home_goals(date)
 		league_away_gf = self.parent.table_note.fetch_away_goals(date)
 		gtk.gdk.threads_leave()
 
+		### Calculate the home field advantage adjustment
 		if(league_away_gf != 0):
 			hfa_adj = math.sqrt(float(league_home_gf) / float(league_away_gf))
 		else:
@@ -1489,6 +1601,7 @@ class Model_Notebook:
 		team_ga = {}
 		team_gp = {}
 
+		### Fetch all of the basic stats for each team
 		gtk.gdk.threads_enter()
 		self.parent.cur.execute("SELECT team_id FROM team_season WHERE season_id = '" + str(season_id) + "'")
 		for team in self.parent.cur.fetchall():
@@ -1498,6 +1611,9 @@ class Model_Notebook:
 			team_gp[team[0]] = float(self.parent.table_note.fetch_gp(int(team[0]), date))
 		gtk.gdk.threads_leave()
 
+		### Iterate through all of the unplayed games + games after the specified date, and
+		###   calculate the chance of win-tie-loss for each team.  Calculate the expected points
+		###   for each team, and add those values into the points already earned.
 		self.parent.cur.execute("SELECT home_id, away_id, date FROM games WHERE (season_id = '" + str(season_id) + "' AND (date > '" + date + "' OR played = 'FALSE'))")
 
 		game_arr = self.parent.cur.fetchall()
@@ -1527,6 +1643,7 @@ class Model_Notebook:
 
 		return team_points
 
+	### Calculate the EAP model based on the standings at the provided date.
 	def eap_model_calc(self, date = None):
 		gtk.gdk.threads_enter()
 		season_id = self.parent.season_combo.get_id()
@@ -1562,6 +1679,7 @@ class Results_Notebook:
 		self.parent = parent
 
 		season_id = self.parent.season_combo.get_id()
+		### There are enough strings here to hold more games than will be in any regular season
 		list_store = gtk.ListStore(gobject.TYPE_STRING,
 						gobject.TYPE_STRING,
 						gobject.TYPE_STRING,
@@ -1619,20 +1737,6 @@ class Results_Notebook:
 		column = gtk.TreeViewColumn("Team", gtk.CellRendererText(), text=0)
 		self.all_view.append_column(column)
 
-		self.parent.cur.execute("SELECT team_id FROM team_season WHERE season_id = '" + str(season_id) + "'")
-		row = self.parent.cur.fetchone()
-		if row:
-			team_id = row[0]
-		else:
-			team_id = 0
-
-		self.parent.cur.execute("SELECT COUNT(*) FROM games WHERE (season_id = '" + str(season_id) + "' AND (home_id = '" + str(team_id) + "' OR away_id = '" + str(team_id) + "'))")
-		row = self.parent.cur.fetchone()
-		if row:
-			for n in range(0,row[0]):
-				column = gtk.TreeViewColumn(str(n+1), gtk.CellRendererText(), text=n+1)
-				self.all_view.append_column(column)
-		
 		self.list_hbox = gtk.HBox(spacing=10)
 		self.list_hbox.set_border_width(5)
 		self.parent.results_note_vbox.pack_start(self.list_hbox)
@@ -1647,6 +1751,7 @@ class Results_Notebook:
 		self.all_view.set_model(list_store)
 		self.repop()
 
+	### Repopulate the results table from the DB
 	def repop(self):
 		season_id = self.parent.season_combo.get_id()
 		
@@ -1659,6 +1764,7 @@ class Results_Notebook:
 		column = gtk.TreeViewColumn("Team", gtk.CellRendererText(), text=0)
 		self.all_view.append_column(column)
 
+		### Add columns to the treeview for each game in the season for each team.
 		self.parent.cur.execute("SELECT team_id FROM team_season WHERE season_id = '" + str(season_id) + "'")
 		row = self.parent.cur.fetchone()
 		if row:
@@ -1673,12 +1779,14 @@ class Results_Notebook:
 				column = gtk.TreeViewColumn(str(n+1), gtk.CellRendererText(), text=n+1)
 				self.all_view.append_column(column)
 
+		### For each team in the league...
 		self.parent.cur.execute("SELECT team_id FROM team_season WHERE season_id = '" + str(season_id) + "'")
 		for row in self.parent.cur.fetchall():
 			team_id = row[0]
 			(name, city, abbr, team_id) = get_team_from_id(self.parent.cur, team_id)
 			team_row = [name]
 
+			### Fetch the results for each game for the current team (sorted by date)
 			self.parent.cur.execute("SELECT home_id, home_goals, away_id, away_goals, played FROM games WHERE (season_id = '" + str(season_id) + "' AND (home_id = '" + str(team_id) + "' OR away_id = '" + str(team_id) + "')) ORDER BY date")
 
 			for game in self.parent.cur.fetchall():
@@ -1710,6 +1818,8 @@ class Results_Notebook:
 				else:
 					text += " "
 				team_row.append(text)
+
+			### Add the results for all of the games into the treeview
 			for n in range(len(team_row),all_list.get_n_columns()):
 				team_row.append("")
 			all_list.append(team_row)
@@ -1745,16 +1855,20 @@ class Guru_Notebook:
 
 		season_id = self.parent.season_combo.get_id()
 
+		### Set the initial dates for the GURU display
 		self.parent.cur.execute("SELECT STRFTIME('%Y',start), STRFTIME('%m',start), STRFTIME('%d',start), STRFTIME('%Y',end), STRFTIME('%m',end), STRFTIME('%d',end) FROM seasons WHERE id = '" + str(season_id) + "'")
 		row = self.parent.cur.fetchone()
 		if row != None:
 			datetime_start_season = datetime.date(int(row[0]), int(row[1]), int(row[2]))
 			datetime_end_season = datetime.date(int(row[3]), int(row[4]), int(row[5]))
 			datetime_today = datetime.date.today()
+			### If today is outside the bounds of the season, use the season start date as
+			###   the start of the date range.  Otherwise, use today.
 			if datetime_today < datetime_start_season or datetime_today > datetime_end_season:
 				datetime_start_range = datetime_start_season
 			else:
 				datetime_start_range = datetime_today
+			### Set the default length of the range to be 7 days.
 			datetime_end_range = datetime_start_range + datetime.timedelta(7)
 			
 			self.start_cal.select_month(datetime_start_range.month-1, datetime_start_range.year)
@@ -1841,6 +1955,7 @@ class Guru_Notebook:
 		self.parent.guru_note_vbox.pack_start(self.recalc_button, expand = False)
 		self.recalc_button.connect('clicked', self.repop)
 
+	### Recalculate the GURU data for games in the specified date range (inclusive)
 	def repop(self, button):
 		start_date = self.start_cal.get_date()
 		end_date = self.end_cal.get_date()
@@ -1849,6 +1964,8 @@ class Guru_Notebook:
 
 		start_date_str = str(start_date[0]) + "-" + str(start_date[1]+1).zfill(2) + "-" + str(start_date[2]).zfill(2)
 		end_date_str = str(end_date[0]) + "-" + str(end_date[1]+1).zfill(2) + "-" + str(end_date[2]).zfill(2)
+
+		### Calculate the HFA adjustment for the starting date of the range
 		league_home_gf = self.parent.table_note.fetch_home_goals(start_date_str)
 		league_away_gf = self.parent.table_note.fetch_away_goals(start_date_str)
 		if(league_away_gf != 0):
@@ -1862,8 +1979,11 @@ class Guru_Notebook:
 
 		season_id = self.parent.season_combo.get_id()
 
+		### For each game within the date range
 		self.parent.cur.execute("SELECT home_id, away_id, date FROM games WHERE (season_id = '" + str(season_id) + "' AND date >= DATE('" + start_date_str + "') AND date <= DATE('" + end_date_str + "')) ORDER BY date")
 		for row in self.parent.cur.fetchall():
+
+			### Calculate the win-tie-loss chances for the specified game
 			(home_name, home_city, home_abbr, home_id) = get_team_from_id(self.parent.cur, row[0])
 			(away_name, away_city, away_abbr, away_id) = get_team_from_id(self.parent.cur, row[1])
 
@@ -1886,6 +2006,7 @@ class Guru_Notebook:
 			away_exp_gf = self.parent.model_note.basic_model_exp_goals_cal(away_gf, home_ga, away_gp, home_gp, 1/hfa_adj)
 			(home_win_chance, tie_chance, away_win_chance) = self.parent.model_note.basic_model_game_calc(home_exp_gf, away_exp_gf)
 
+			### Calculate the most likely number of goals scored for the home team
 			goal_prob = []
 			index = 0
 			goal_calc = poisson_pmf(index, home_exp_gf)
@@ -1898,6 +2019,7 @@ class Guru_Notebook:
 			
 			home_max_prob = index - 1
 
+			### Calculate the most likely number of goals scored for the away team
 			goal_prob = []
 			index = 0
 			goal_calc = poisson_pmf(index, away_exp_gf)
@@ -1912,6 +2034,8 @@ class Guru_Notebook:
 
 			max_prob_str = str(home_max_prob) + " - " + str(away_max_prob)
 
+			### Calculate the best expected points values for GURU for each possible scenario:
+			###    home win, tie, away win
 			exp_guru_pts_home = []
 			exp_guru_pts_tie = []
 			exp_guru_pts_away = []
@@ -1933,18 +2057,23 @@ class Guru_Notebook:
 			max_exp_guru_pts_away = [max(exp_guru_pts_away[x]) for x in range(10)]
 			max_exp_guru_pts_tie  = [max(exp_guru_pts_tie[x])  for x in range(10)]
 
+			### Determine the best GURU result for a home win
 			max_exp_guru_pts_home_hg = max_exp_guru_pts_home.index(max(max_exp_guru_pts_home))
 			max_exp_guru_pts_home_ag = exp_guru_pts_home[max_exp_guru_pts_home_hg].index(max(exp_guru_pts_home[max_exp_guru_pts_home_hg]))
 			max_exp_guru_pts_home_str = str(max_exp_guru_pts_home_hg) + " - " + str(max_exp_guru_pts_home_ag)
 
+			### Determine the best GURU result for a tie
 			max_exp_guru_pts_tie_hg = max_exp_guru_pts_tie.index(max(max_exp_guru_pts_tie))
 			max_exp_guru_pts_tie_ag = exp_guru_pts_tie[max_exp_guru_pts_tie_hg].index(max(exp_guru_pts_tie[max_exp_guru_pts_tie_hg]))
 			max_exp_guru_pts_tie_str = str(max_exp_guru_pts_tie_hg) + " - " + str(max_exp_guru_pts_tie_ag)
 
+			### Determine the best GURU result for an away win
 			max_exp_guru_pts_away_hg = max_exp_guru_pts_away.index(max(max_exp_guru_pts_away))
 			max_exp_guru_pts_away_ag = exp_guru_pts_away[max_exp_guru_pts_away_hg].index(max(exp_guru_pts_away[max_exp_guru_pts_away_hg]))
 			max_exp_guru_pts_away_str = str(max_exp_guru_pts_away_hg) + " - " + str(max_exp_guru_pts_away_ag)
 
+
+			### Put this massive amount of data calculated into the treeview.
 			all_list.append((row[2], home_abbr, away_abbr, home_win_chance*100, tie_chance*100, away_win_chance*100, max_prob_str, max_exp_guru_pts_home_str, max(max_exp_guru_pts_home), max_exp_guru_pts_away_str, max(max_exp_guru_pts_away), max_exp_guru_pts_tie_str, max(max_exp_guru_pts_tie)))
 
 class Base:
@@ -2003,14 +2132,25 @@ class Base:
 				self.cur.execute("DELETE FROM version")
 				self.cur.execute("INSERT INTO version (number) VALUES('2')")
 				self.db.commit()
-				self.cur.execute("SELECT number FROM version")
-				row = self.cur.fetchone()
 			elif(row[0] == 2):
-				print "Got a version 2 DB"
+				print "Got a version 2 DB, upgrading to version 3"
+				self.cur.execute("CREATE TABLE IF NOT EXISTS season_confs (" +
+							"season_id INTEGER, " +
+							"conf_id INTEGER)")
+				self.cur.execute("CREATE TABLE IF NOT EXISTS confs (" +
+							"conf_id INTEGER PRIMARY KEY ASC, " +
+							"conf_name STRING)")
+				self.cur.execute("DELETE FROM version")
+				self.cur.execute("INSERT INTO version (number) VALUES('3')")
+				self.db.commit()
+			elif(row[0] == 3):
+				print "Got a version 3 DB"
 				break
 			else:
 				print "Error, got an unsupported DB version"
 				return
+			self.cur.execute("SELECT number FROM version")
+			row = self.cur.fetchone()
 
 		self.window = gtk.Window(gtk.WINDOW_TOPLEVEL)
 		self.window.connect('destroy', lambda w: gtk.main_quit())
@@ -2020,7 +2160,7 @@ class Base:
 		self.window.add(self.window_vbox)
 
 		self.combo_hbox = gtk.HBox(spacing=10)
-		self.window_vbox.add(self.combo_hbox)
+		self.window_vbox.pack_start(self.combo_hbox, expand = False)
 
 		self.league_vbox = gtk.VBox(spacing=5)
 		self.combo_hbox.add(self.league_vbox)
@@ -2031,6 +2171,11 @@ class Base:
 		self.combo_hbox.add(self.season_vbox)
 
 		self.season_combo = Season_Combo(self)
+
+		self.conference_vbox = gtk.VBox(spacing=5)
+		self.combo_hbox.add(self.conference_vbox)
+
+		self.conf_combo = Conference_Combo(self)
 
 		self.notebook = gtk.Notebook()
 		self.window_vbox.add(self.notebook)
