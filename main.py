@@ -972,6 +972,8 @@ class Teams_Notebook:
 				self.parent.db.commit()
 
 				self.repop()
+				self.parent.table_note.repop()
+				self.parent.model_note.clear()
 
 		dialog.destroy()
 
@@ -1497,11 +1499,15 @@ class Table_Notebook:
 	### Repopulate the table from the DB
 	def repop(self):
 		season_id = self.parent.season_combo.get_id()
+		conf_id = self.parent.conf_combo.get_id()
 
 		all_list = self.all_view.get_model()
 		all_list.clear()
 
-		self.parent.cur.execute("SELECT team_id FROM team_season WHERE season_id = '" + str(season_id) + "'")
+		if conf_id == None:
+			self.parent.cur.execute("SELECT team_id FROM team_season WHERE (season_id = '" + str(season_id) + "')")
+		else:
+			self.parent.cur.execute("SELECT team_id FROM team_season WHERE (season_id = '" + str(season_id) + "' AND conf_id = '" + str(conf_id) + "')")
 		for row in self.parent.cur.fetchall():
 			team_id = row[0]
 			self.parent.cur.execute("SELECT team_name FROM teams WHERE id = '" + str(row[0]) + "'")
@@ -1678,7 +1684,11 @@ class Model_Notebook:
 		f.write('  <thead><tr><td>Team</td><td>PPG</td><td>Pts</td><td>1-O Pts</td><td>GP</td><td>W</td><td>L</td><td>T</td><td>GF</td><td>GA</td><td>GD</td><td>GF:GA</td><td>EAP</td></tr></thead>\n')
 
 		season_id = self.parent.season_combo.get_id()
-		self.parent.cur.execute("SELECT team_id FROM team_season WHERE season_id = '" + str(season_id) + "'")
+		conf_id = self.parent.conf_combo.get_id()
+		if conf_id == None:
+			self.parent.cur.execute("SELECT team_id FROM team_season WHERE (season_id = '" + str(season_id) + "')")
+		else:
+			self.parent.cur.execute("SELECT team_id FROM team_season WHERE (season_id = '" + str(season_id) + "' AND conf_id = '" + str(conf_id) + "')")
 
 
 		for team in self.parent.cur.fetchall():
@@ -1764,11 +1774,15 @@ class Model_Notebook:
 
 		gtk.gdk.threads_enter()
 		season_id = self.parent.season_combo.get_id()
+		conf_id = self.parent.conf_combo.get_id()
 		all_list = self.all_view.get_model()
 		all_list.clear()
 		gtk.gdk.threads_leave()
 
-		self.parent.cur.execute("SELECT team_id FROM team_season WHERE season_id = '" + str(season_id) + "'")
+		if conf_id == None:
+			self.parent.cur.execute("SELECT team_id FROM team_season WHERE (season_id = '" + str(season_id) + "')")
+		else:
+			self.parent.cur.execute("SELECT team_id FROM team_season WHERE (season_id = '" + str(season_id) + "' AND conf_id = '" + str(conf_id) + "')")
 		gtk.gdk.threads_enter()
 		for team in self.parent.cur.fetchall():
 			self.parent.cur.execute("SELECT team_name FROM teams WHERE id = '" + str(team[0]) + "'")
