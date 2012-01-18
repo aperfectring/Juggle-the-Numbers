@@ -275,6 +275,7 @@ class Season_Combo:
 			if row != None:
 				self.parent.season_note.set_end(year = row[0], month = row[1], day = row[2])
 
+		self.parent.conf_note.repop()
 		self.parent.teams_note.repop()
 		self.parent.games_note.repop()
 
@@ -2341,7 +2342,13 @@ class Base:
 				self.cur.execute("INSERT INTO version (number) VALUES('3')")
 				self.db.commit()
 			elif(row[0] == 3):
-				print "Got a version 3 DB"
+				print "Got a version 3 DB, upgrading to version 4"
+				self.cur.execute("ALTER TABLE team_season ADD COLUMN conf_id INTEGER")
+				self.cur.execute("DELETE FROM version")
+				self.cur.execute("INSERT INTO version (number) VALUES('4')")
+				self.db.commit()
+			elif(row[0] == 4):
+				print "Got a version 4 DB"
 				break
 			else:
 				print "Error, got an unsupported DB version"
