@@ -624,6 +624,8 @@ class Conference_Notebook:
 		all_list = view.get_model()
 		(name, myid) = self.get_conf(view)
 
+		self.parent.cur.execute("UPDATE team_season SET conf_id = NULL WHERE conf_id = '" + str(myid) + "'")
+
 		self.parent.cur.execute("DELETE FROM season_confs WHERE (conf_id = '" + str(myid) + "')")
 		self.parent.cur.execute("DELETE FROM confs WHERE (conf_id = '" + str(myid) + "')")
 		self.parent.db.commit()
@@ -758,7 +760,7 @@ class Teams_Notebook:
 
 		self.league_team_edit_button = gtk.Button("Edit team")
 		league_list_hbox.add(self.league_team_edit_button)
-		self.league_team_edit_button.connect('clicked', self.edit_team, self.league_view)
+		self.league_team_edit_button.connect('clicked', self.edit_team, self.league_view, True)
 
 		self.league_team_del_button = gtk.Button("Delete team")
 		league_list_hbox.add(self.league_team_del_button)
@@ -837,7 +839,7 @@ class Teams_Notebook:
 		self.repop()
 
 	### Create/edit the details of a team
-	def edit_team(self, button, view):
+	def edit_team(self, button, view, has_season = False):
 		# Determine if we are editing an already existing team, or creating a new one
 		if button.get_label() == "Edit team":
 			edit = True
@@ -851,6 +853,15 @@ class Teams_Notebook:
 		# If we are editing a team, get the details of the current team
 		if edit == True:
 			(name, city, abbr, myid) = self.get_team(view)
+			if name == None:
+				return
+			conf_id = None
+			if has_season == True:
+				self.parent.cur.execute("SELECT conf_id FROM team_season WHERE (team_id = '" + str(myid) + "' AND season_id = '" + str(self.parent.season_combo.get_id()) + "')")
+				row = self.parent.cur.fetchone()
+				conf_id = None
+				if row:
+					conf_id = row[0]
 
 
 		# Create a dialog window to prompt the user for new information.
@@ -893,6 +904,34 @@ class Teams_Notebook:
 		abbr_entry.show()
 		abbr_hbox.pack_start(abbr_entry)
 
+		if has_season == True:
+			conf_hbox = gtk.HBox(spacing=10)
+			conf_hbox.set_border_width(5)
+			conf_hbox.show()
+			dialog.vbox.pack_start(conf_hbox)
+			conf_label = gtk.Label("Conf:")
+			conf_label.show()
+			conf_hbox.pack_start(conf_label)
+			conf_combo = gtk.combo_box_new_text()
+			conf_combo.append_text("None")
+			self.parent.cur.execute("SELECT conf_id FROM season_confs WHERE season_id = '" + str(self.parent.season_combo.get_id()) + "'")
+			for row in self.parent.cur.fetchall():
+				self.parent.cur.execute("SELECT conf_name FROM confs WHERE conf_id = '" + str(row[0]) + "'")
+				conf_name = self.parent.cur.fetchone()
+				if conf_name:
+					conf_combo.append_text(conf_name[0])
+			model = conf_combo.get_model()
+			conf_combo.set_active(0)
+			if conf_id:
+				self.parent.cur.execute("SELECT conf_name FROM confs WHERE conf_id = '" + str(row[0]) + "'")
+				conf_name = self.parent.cur.fetchone()
+				if conf_name:
+					for index in range(0, len(model)):
+						if model[index][0] == conf_name[0]:
+							conf_combo.set_active(index)
+			conf_combo.show()
+			conf_hbox.pack_start(conf_combo)
+
 		# If we are editing a team, update the widgets to have the current
 		#   information for that team
 		if edit == True:
@@ -911,6 +950,20 @@ class Teams_Notebook:
 					                              "city = '" + city_entry.get_text() + "', " + 
 					                              "abbr = '" + abbr_entry.get_text() + "' " + 
 					                           "WHERE team_name = '" + name + "'")
+					if has_season == True:
+						model = conf_combo.get_model()
+						if model[conf_combo.get_active()][0] == "None":
+							conf_text = "conf_id = NULL"
+						else:
+							self.parent.cur.execute("SELECT conf_id FROM confs WHERE conf_name = '" + model[conf_combo.get_active()][0] + "'")
+							row = self.parent.cur.fetchone()
+							if row:
+								conf_text = "conf_id = '" + str(row[0]) + "'"
+							else:
+								conf_text = "conf_id = NULL"
+						self.parent.cur.execute("UPDATE team_season SET " + conf_text +
+										" WHERE (team_id = '" + str(myid) + "' AND season_id = '" + str(self.parent.season_combo.get_id()) + "')")
+						
 				else:
 					self.parent.cur.execute("INSERT INTO teams (team_name, city, abbr) " + 
 					                           "VALUES ('" + name_entry.get_text() + "', '" +
