@@ -1944,8 +1944,60 @@ class Results_Notebook:
 		self.parent = parent
 
 		season_id = self.parent.season_combo.get_id()
-		### There are enough strings here to hold more games than will be in any regular season
+		#### There are enough strings here for 52 games in the season, AND their background colors.
+		####    This is much more than we need, but better to be safe than sorry.
 		list_store = gtk.ListStore(gobject.TYPE_STRING,
+						gobject.TYPE_STRING,
+						gobject.TYPE_STRING,
+						gobject.TYPE_STRING,
+						gobject.TYPE_STRING,
+						gobject.TYPE_STRING,
+						gobject.TYPE_STRING,
+						gobject.TYPE_STRING,
+						gobject.TYPE_STRING,
+						gobject.TYPE_STRING,
+						gobject.TYPE_STRING,
+						gobject.TYPE_STRING,
+						gobject.TYPE_STRING,
+						gobject.TYPE_STRING,
+						gobject.TYPE_STRING,
+						gobject.TYPE_STRING,
+						gobject.TYPE_STRING,
+						gobject.TYPE_STRING,
+						gobject.TYPE_STRING,
+						gobject.TYPE_STRING,
+						gobject.TYPE_STRING,
+						gobject.TYPE_STRING,
+						gobject.TYPE_STRING,
+						gobject.TYPE_STRING,
+						gobject.TYPE_STRING,
+						gobject.TYPE_STRING,
+						gobject.TYPE_STRING,
+						gobject.TYPE_STRING,
+						gobject.TYPE_STRING,
+						gobject.TYPE_STRING,
+						gobject.TYPE_STRING,
+						gobject.TYPE_STRING,
+						gobject.TYPE_STRING,
+						gobject.TYPE_STRING,
+						gobject.TYPE_STRING,
+						gobject.TYPE_STRING,
+						gobject.TYPE_STRING,
+						gobject.TYPE_STRING,
+						gobject.TYPE_STRING,
+						gobject.TYPE_STRING,
+						gobject.TYPE_STRING,
+						gobject.TYPE_STRING,
+						gobject.TYPE_STRING,
+						gobject.TYPE_STRING,
+						gobject.TYPE_STRING,
+						gobject.TYPE_STRING,
+						gobject.TYPE_STRING,
+						gobject.TYPE_STRING,
+						gobject.TYPE_STRING,
+						gobject.TYPE_STRING,
+						gobject.TYPE_STRING,
+						gobject.TYPE_STRING,
 						gobject.TYPE_STRING,
 						gobject.TYPE_STRING,
 						gobject.TYPE_STRING,
@@ -2016,6 +2068,7 @@ class Results_Notebook:
 		self.all_view.set_model(list_store)
 		self.repop()
 
+
 	### Repopulate the results table from the DB
 	def repop(self):
 		season_id = self.parent.season_combo.get_id()
@@ -2041,7 +2094,7 @@ class Results_Notebook:
 		row = self.parent.cur.fetchone()
 		if row:
 			for n in range(0,row[0]):
-				column = gtk.TreeViewColumn(str(n+1), gtk.CellRendererText(), text=n+1)
+				column = gtk.TreeViewColumn(str(n+1), gtk.CellRendererText(), text=(n*2+1), background=(n*2+2))
 				self.all_view.append_column(column)
 
 		### For each team in the league...
@@ -2083,6 +2136,16 @@ class Results_Notebook:
 				else:
 					text += " "
 				team_row.append(text)
+
+				if game[4] == "FALSE":
+					bg = "#FFFFFF"
+				elif goals > other_goals:
+					bg = "#80FF80"
+				elif goals < other_goals:
+					bg = "#FF8080"
+				else:
+					bg = "#FFFF80"
+				team_row.append(bg)
 
 			### Add the results for all of the games into the treeview
 			for n in range(len(team_row),all_list.get_n_columns()):
