@@ -66,7 +66,6 @@ class League_Combo:
 		self.parent.league_vbox.add(self.label)
 
 		self.combo = gtk.combo_box_new_text()
-		self.repop()
 		self.parent.league_vbox.add(self.combo)
 		self.combo.connect('changed', self.update)
 
@@ -204,6 +203,7 @@ class League_Notebook:
 	###    Commits all data from the league notebook page to the database
 	###    Updates the league combobox string to reflect any changes made
 	def update(self, button):
+		print "League_Notebook update"
 		self.parent.cur.execute("UPDATE leagues " + 
                                            "SET country = '" + self.country_entry.get_text() + "', " + 
                                               "league_name = '" + self.name_entry.get_text() + "', " + 
@@ -241,7 +241,6 @@ class Season_Combo:
 		self.parent.season_vbox.add(self.label)
 
 		self.combo = gtk.combo_box_new_text()
-		self.repop()
 		self.parent.season_vbox.add(self.combo)
 		self.combo.connect('changed', self.update)
 
@@ -276,8 +275,6 @@ class Season_Combo:
 				self.parent.season_note.set_end(year = row[0], month = row[1], day = row[2])
 
 		self.parent.conf_note.repop()
-		self.parent.teams_note.repop()
-		self.parent.games_note.repop()
 
 	### Callback for when the "Add season" button is clicked"
 	###    This will create a "blank" season, which has no start or end date
@@ -431,7 +428,6 @@ class Conference_Combo:
 		self.parent.conference_vbox.add(self.label)
 
 		self.combo = gtk.combo_box_new_text()
-		self.repop()
 		self.parent.conference_vbox.add(self.combo)
 		self.combo.connect('changed', self.update)
 
@@ -455,15 +451,9 @@ class Conference_Combo:
 
 	### Callback which triggers the recalculation of other widgets when the combo box is changed.
 	def update(self, button):
-		if hasattr(self.parent, "table_note"):
-			self.parent.table_note.repop()
-		if hasattr(self.parent, "results_note"):
-			self.parent.results_note.repop()
-		if hasattr(self.parent, "model_note"):
-			self.parent.model_note.clear()
-		if hasattr(self.parent, "notebook"):
-			if self.parent.notebook.get_current_page() != -1:
-				self.parent.model_note.do_recalc(self.parent.notebook, 0, self.parent.notebook.get_current_page())
+
+		self.parent.teams_note.repop()
+		self.parent.games_note.repop()
 
 	### Fetch the unique ID of the currently selected conference
 	def get_id(self):
@@ -576,7 +566,6 @@ class Conference_Notebook:
 		self.confops_hbox.add(self.conf_add_button)
 		self.conf_add_button.connect('clicked', self.edit_conf, self.all_view)
 
-		self.repop()
 
 	def repop(self):
 		sid = self.parent.season_combo.get_id()
@@ -777,7 +766,6 @@ class Teams_Notebook:
 		self.teamops_hbox.add(self.team_add_button)
 		self.team_add_button.connect('clicked', self.edit_team, self.all_view)
 
-		self.repop()
 
 	### Fill the team lists with all teams
 	def repop(self):
@@ -1065,7 +1053,6 @@ class Games_Notebook:
 		self.gameops_hbox.add(self.game_delete_button)
 		self.game_delete_button.connect('clicked', self.delete_game)
 
-		self.repop()
 
 	### Update the treeview with all games pertaining to the specified league/season
 	def repop(self):
@@ -1090,8 +1077,8 @@ class Games_Notebook:
 			all_list.append( (row[0], home_text, row[2], row[3], away_text, row[5], row[6], row[7], row[8], style_text_array[row[9]], row[10]) )
 
 		self.parent.table_note.repop()
-		if hasattr(self.parent, "results_note"):
-			self.parent.results_note.repop()
+		self.parent.results_note.repop()
+		self.parent.guru_note.clear()
 		self.parent.model_note.clear()
 		if hasattr(self.parent, "notebook"):
 			if self.parent.notebook.get_current_page() != -1:
@@ -1494,7 +1481,6 @@ class Table_Notebook:
 		column.set_sort_column_id(9)
 		self.all_view.append_column(column)
 
-		self.repop()
 
 	### Repopulate the table from the DB
 	def repop(self):
@@ -2066,7 +2052,6 @@ class Results_Notebook:
 		scrolled_window.add(self.all_view)
 
 		self.all_view.set_model(list_store)
-		self.repop()
 
 
 	### Repopulate the results table from the DB
@@ -2282,6 +2267,9 @@ class Guru_Notebook:
 		self.recalc_button = gtk.Button("Recalculate")
 		self.parent.guru_note_vbox.pack_start(self.recalc_button, expand = False)
 		self.recalc_button.connect('clicked', self.repop)
+
+	def clear(self):
+		self.all_view.get_model().clear()
 
 	### Recalculate the GURU data for games in the specified date range (inclusive)
 	def repop(self, button):
@@ -2567,11 +2555,9 @@ class Base:
 		self.notebook.append_page(self.guru_note_vbox, gtk.Label("Guru"))
 		self.guru_note = Guru_Notebook(self)
 
-		#### Update the combo boxes so the notebooks show the right data ####
-		self.league_combo.update(self.league_combo.combo)
-		self.season_combo.update(self.season_combo.combo)
-
+		self.league_combo.repop()
 		self.window.show_all()
+
 		return
 
 
