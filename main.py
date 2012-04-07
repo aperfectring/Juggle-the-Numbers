@@ -38,6 +38,27 @@ def get_team_from_name(cur, name):
 			abbr = row[2]
 	return (name, city, abbr, myid)
 
+### Gets team information tuple based on the team name
+def get_team_from_abbr(cur, abbr, season_id = None):
+	cur.execute("SELECT city, id, team_name FROM teams WHERE abbr = '" + abbr + "'")
+	city = None
+	myid = None
+	name = None
+	for row in cur.fetchall():
+		if row:
+			if season_id:
+				cur.execute("SELECT * FROM team_season WHERE team_id = '" + str(row[1]) + "' AND season_id = '" + season_id + "'")
+				if len(cur.fetchall()) > 0:
+					city = row[0]
+					myid = row[1]
+					name = row[2]
+			else:
+				city = row[0]
+				myid = row[1]
+				name = row[2]
+
+	return (name, city, abbr, myid)
+
 ### The standard array of different types of game format.
 style_text_array = [
 		"Standard format",
@@ -1139,7 +1160,7 @@ class Games_Notebook:
 		row = None
 		self.parent.cur.execute("SELECT team_id FROM team_season WHERE (season_id='" + str(self.parent.season_combo.get_id()) + "')")
 		for row in self.parent.cur.fetchall():
-			self.parent.cur.execute("SELECT team_name FROM teams WHERE (id='" + str(row[0]) + "')")
+			self.parent.cur.execute("SELECT abbr FROM teams WHERE (id='" + str(row[0]) + "')")
 			for name in self.parent.cur.fetchall():
 				combo.append_text(name[0])
 		if row:
@@ -1161,8 +1182,8 @@ class Games_Notebook:
 		if date == None:
 			return
 		season_id_text = str(self.parent.season_combo.get_id())
-		(home_text, home_city_text, home_abbr_text, home_id) = get_team_from_name(self.parent.cur, home)
-		(away_text, away_city_text, away_abbr_text, away_id) = get_team_from_name(self.parent.cur, away)
+		(home_text, home_city_text, home_abbr_text, home_id) = get_team_from_abbr(self.parent.cur, home, season_id_text)
+		(away_text, away_city_text, away_abbr_text, away_id) = get_team_from_abbr(self.parent.cur, away, season_id_text)
 
 		self.parent.cur.execute("SELECT id FROM games WHERE (season_id = '" + season_id_text + "' AND " +
 								    "home_id = '" + str(home_id) + "' AND " +
@@ -1187,8 +1208,8 @@ class Games_Notebook:
 		# If editing, try to fetch the appropriate game information
 		if edit == True:
 			(date,
-				home, home_goals, home_pks,
-				away, away_goals, away_pks,
+				home_abbr, home_goals, home_pks,
+				away_abbr, away_goals, away_pks,
 				aet, pks, style, played) = self.get_game(self.all_view)
 			if date == None:
 				edit = False
@@ -1317,14 +1338,14 @@ class Games_Notebook:
 			date_cal.select_day(datetime_obj.day)
 			model = home_combo.get_model()
 			for index in range(0,len(model)):
-				if model[index][0] == home:
+				if model[index][0] == home_abbr:
 					home_combo.set_active(index)
 			homegoals_spin.set_value(int(home_goals))
 			homepks_spin.set_value(int(home_pks))
 
 			model = away_combo.get_model()
 			for index in range(0,len(model)):
-				if model[index][0] == away:
+				if model[index][0] == away_abbr:
 					away_combo.set_active(index)
 			awaygoals_spin.set_value(int(away_goals))
 			awaypks_spin.set_value(int(away_pks))
@@ -1368,12 +1389,12 @@ class Games_Notebook:
 			date_text = str(newdate[0]) + "-" + str(newdate[1]+1).zfill(2) + "-" + str(newdate[2]).zfill(2)
 			model = home_combo.get_model()
 			index = home_combo.get_active()
-			home_text = model[index][0]
+			home_abbr_text = model[index][0]
 			home_goals_text = str(homegoals_spin.get_value_as_int())
 			home_pks_text = str(homepks_spin.get_value_as_int())
 			model = away_combo.get_model()
 			index = away_combo.get_active()
-			away_text = model[index][0]
+			away_abbr_text = model[index][0]
 			away_goals_text = str(awaygoals_spin.get_value_as_int())
 			away_pks_text = str(awaypks_spin.get_value_as_int())
 			aet_text = "TRUE" if (aet_check.get_active() == True) else "FALSE"
@@ -1384,8 +1405,8 @@ class Games_Notebook:
 			style_text = model[index][0]
 			style_num_text = str(index)
 
-			(home_text, home_city_text, home_abbr_text, home_id) = get_team_from_name(self.parent.cur, home_text)
-			(away_text, away_city_text, away_abbr_text, away_id) = get_team_from_name(self.parent.cur, away_text)
+			(home_text, home_city_text, home_abbr_text, home_id) = get_team_from_abbr(self.parent.cur, home_abbr_text, season_id_text)
+			(away_text, away_city_text, away_abbr_text, away_id) = get_team_from_abbr(self.parent.cur, away_abbr_text, season_id_text)
 			home_id_text = str(home_id)
 			away_id_text = str(away_id)
 
@@ -1394,8 +1415,8 @@ class Games_Notebook:
 			### Update if we are editing, otherwise create a new game
 			if home_text != away_text:
 				if edit == True:
-					(home, orig_home_city_text, orig_home_abbr_text, orig_home_id) = get_team_from_name(self.parent.cur, home)
-					(away, orig_away_city_text, orig_away_abbr_text, orig_away_id) = get_team_from_name(self.parent.cur, away)
+					(home, orig_home_city_text, orig_home_abbr_text, orig_home_id) = get_team_from_abbr(self.parent.cur, home_abbr, season_id_text)
+					(away, orig_away_city_text, orig_away_abbr_text, orig_away_id) = get_team_from_abbr(self.parent.cur, away_abbr, season_id_text)
 					orig_home_id_text = str(orig_home_id)
 					orig_away_id_text = str(orig_away_id)
 					self.parent.cur.execute("UPDATE games SET " +
