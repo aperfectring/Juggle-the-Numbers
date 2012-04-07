@@ -1,5 +1,6 @@
 #!/usr/bin/python
 
+
 import pygtk
 pygtk.require('2.0')
 import gtk
@@ -63,14 +64,14 @@ class League_Combo:
 		self.parent = parent
 		
 		self.label = gtk.Label("League:")
-		self.parent.league_vbox.add(self.label)
+		self.parent.league_vbox.pack_start(self.label, expand=False)
 
 		self.combo = gtk.combo_box_new_text()
-		self.parent.league_vbox.add(self.combo)
+		self.parent.league_vbox.pack_start(self.combo, expand=False)
 		self.combo.connect('changed', self.update)
 
 		self.button = gtk.Button("Add League")
-		self.parent.league_vbox.add(self.button)
+		self.parent.league_vbox.pack_start(self.button, expand=False)
 		self.button.connect('clicked', self.add)
 
 	### Callback for when the league combobox is changed
@@ -238,14 +239,14 @@ class Season_Combo:
 	def __init__(self, parent):
 		self.parent = parent
 		self.label = gtk.Label("Season:")
-		self.parent.season_vbox.add(self.label)
+		self.parent.season_vbox.pack_start(self.label, expand=False)
 
 		self.combo = gtk.combo_box_new_text()
-		self.parent.season_vbox.add(self.combo)
+		self.parent.season_vbox.pack_start(self.combo, expand=False)
 		self.combo.connect('changed', self.update)
 
 		self.button = gtk.Button("Add Season")
-		self.parent.season_vbox.add(self.button)
+		self.parent.season_vbox.pack_start(self.button, expand=False)
 		self.button.connect('clicked', self.add)
 
 	### Callback handler for when the season combobox changes
@@ -425,10 +426,10 @@ class Conference_Combo:
 	def __init__(self, parent):
 		self.parent = parent
 		self.label = gtk.Label("Conference:")
-		self.parent.conference_vbox.add(self.label)
+		self.parent.conference_vbox.pack_start(self.label, expand=False)
 
 		self.combo = gtk.combo_box_new_text()
-		self.parent.conference_vbox.add(self.combo)
+		self.parent.conference_vbox.pack_start(self.combo, expand=False)
 		self.combo.connect('changed', self.update)
 
 	### Update the combo box with the appropriate conferences for the current league/season
@@ -668,6 +669,26 @@ class Conference_Notebook:
 				self.repop()
 
 		dialog.destroy()
+
+class Date_Calendar:
+	def __init__(self, parent):
+		self.parent = parent
+		self.label = gtk.Label("Date:")
+		self.parent.date_vbox.pack_start(self.label, expand=False)
+
+		self.calendar = gtk.Calendar()
+		self.parent.date_vbox.pack_start(self.calendar, expand=False)
+		self.calendar.select_month(datetime.date.today().month-1, datetime.date.today().year)
+		self.calendar.select_day(datetime.date.today().day)
+
+		self.calendar.connect('day-selected', self.repop)
+
+	def get_date(self):
+		(year, month, day) = self.calendar.get_date()
+		return datetime.date(year, month+1, day).isoformat()
+		
+	def repop(self, calendar):
+		self.parent.games_note.repop()
 
 class Teams_Notebook:
 	def __init__(self, parent):
@@ -974,7 +995,7 @@ class Games_Notebook:
 		self.parent.games_note_vbox.pack_start(self.list_hbox)
 
 		scrolled_window = gtk.ScrolledWindow()
-		scrolled_window.set_policy(gtk.POLICY_NEVER, gtk.POLICY_AUTOMATIC)
+		scrolled_window.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
 		self.list_hbox.pack_start(scrolled_window)
 
 		list_store = gtk.ListStore(gobject.TYPE_STRING,		# Date
@@ -1001,11 +1022,11 @@ class Games_Notebook:
 		column.set_sort_column_id(1)
 		self.all_view.append_column(column)
 
-		column = gtk.TreeViewColumn("Home Goals", gtk.CellRendererText(), text=2)
+		column = gtk.TreeViewColumn("Home\nGoals", gtk.CellRendererText(), text=2)
 		column.set_sort_column_id(2)
 		self.all_view.append_column(column)
 
-		column = gtk.TreeViewColumn("Home PK Goals", gtk.CellRendererText(), text=3)
+		column = gtk.TreeViewColumn("Home PK\nGoals", gtk.CellRendererText(), text=3)
 		column.set_sort_column_id(3)
 		self.all_view.append_column(column)
 
@@ -1013,11 +1034,11 @@ class Games_Notebook:
 		column.set_sort_column_id(4)
 		self.all_view.append_column(column)
 
-		column = gtk.TreeViewColumn("Away Goals", gtk.CellRendererText(), text=5)
+		column = gtk.TreeViewColumn("Away\nGoals", gtk.CellRendererText(), text=5)
 		column.set_sort_column_id(5)
 		self.all_view.append_column(column)
 
-		column = gtk.TreeViewColumn("Away PK Goals", gtk.CellRendererText(), text=6)
+		column = gtk.TreeViewColumn("Away PK\nGoals", gtk.CellRendererText(), text=6)
 		column.set_sort_column_id(6)
 		self.all_view.append_column(column)
 
@@ -1066,11 +1087,11 @@ class Games_Notebook:
 						"aet, pks, game_style, played " +
 					"FROM games WHERE (season_id='" + str(sid) + "')")
 		for row in self.parent.cur.fetchall():
-			self.parent.cur.execute("SELECT team_name FROM teams WHERE (id='" + str(row[1]) + "')")
+			self.parent.cur.execute("SELECT abbr FROM teams WHERE (id='" + str(row[1]) + "')")
 			for team_names in self.parent.cur.fetchall():
 				home_text = team_names[0]
 
-			self.parent.cur.execute("SELECT team_name FROM teams WHERE (id='" + str(row[4]) + "')")
+			self.parent.cur.execute("SELECT abbr FROM teams WHERE (id='" + str(row[4]) + "')")
 			for team_names in self.parent.cur.fetchall():
 				away_text = team_names[0]
 
@@ -1080,9 +1101,6 @@ class Games_Notebook:
 		self.parent.results_note.repop()
 		self.parent.guru_note.clear()
 		self.parent.model_note.clear()
-		if hasattr(self.parent, "notebook"):
-			if self.parent.notebook.get_current_page() != -1:
-				self.parent.model_note.do_recalc(self.parent.notebook, 0, self.parent.notebook.get_current_page())
 
 	### Get the game information tuple from the treeview
 	def get_game(self, view):
@@ -1329,10 +1347,19 @@ class Games_Notebook:
 				datetime_obj = datetime.datetime.strptime(start_date, "%Y-%m-%d")
 				date_cal.select_month(datetime_obj.month - 1, datetime_obj.year)
 				date_cal.select_day(datetime_obj.day)
+				if datetime_obj < datetime.datetime.today():
+					played_check.set_active(True)
+				else:
+					played_check.set_active(False)
 			else:
 				begin_date = self.parent.season_note.start_cal.get_date()
 				date_cal.select_month(begin_date[1], begin_date[0])
 				date_cal.select_day(begin_date[2])
+				if datetime.date(begin_date[0], begin_date[1] + 1, begin_date[2]) < datetime.date.today():
+					played_check.set_active(True)
+				else:
+					played_check.set_active(False)
+				
 
 		response = dialog.run()
 		if response == gtk.RESPONSE_ACCEPT:
@@ -1499,12 +1526,12 @@ class Table_Notebook:
 			self.parent.cur.execute("SELECT team_name FROM teams WHERE id = '" + str(row[0]) + "'")
 			team_name = self.parent.cur.fetchone()[0]
 
-			games_played = self.fetch_gp(team_id)
-			goals_scored = self.fetch_gf(team_id)
-			goals_against = self.fetch_ga(team_id)
-			num_tied = self.fetch_ties(team_id)
-			num_won = self.fetch_wins(team_id)
-			num_lost = self.fetch_loss(team_id)
+			games_played = self.fetch_gp(team_id, self.parent.date_cal.get_date())
+			goals_scored = self.fetch_gf(team_id, self.parent.date_cal.get_date())
+			goals_against = self.fetch_ga(team_id, self.parent.date_cal.get_date())
+			num_tied = self.fetch_ties(team_id, self.parent.date_cal.get_date())
+			num_won = self.fetch_wins(team_id, self.parent.date_cal.get_date())
+			num_lost = self.fetch_loss(team_id, self.parent.date_cal.get_date())
 
 			goal_ratio = 100 if goals_against == 0 else (float(goals_scored) / float(goals_against))
 
@@ -1648,17 +1675,21 @@ class Model_Notebook:
 		column.set_sort_column_id(2)
 		self.all_view.append_column(column)
 
-		self.parent.notebook.connect('switch-page', self.do_recalc)
 		self.calc_thread = threading.Thread(target=self.repop)
 
 		self.calc_progress = gtk.ProgressBar()
 		self.parent.model_note_vbox.pack_start(self.calc_progress, expand = False)
+
+		self.calc_button = gtk.Button("Recalculate")
+		self.parent.model_note_vbox.pack_start(self.calc_button, expand = False)
+		self.calc_button.connect('clicked', self.do_recalc)
 
 		self.export_button = gtk.Button("Export")
 		self.parent.model_note_vbox.pack_start(self.export_button, expand = False)
 		self.export_button.connect('clicked', self.export_text)
 
 		self.thread_sig = threading.Event()
+		self.calc_progress.set_visible(False)
 
 	### Export the table+models in the format expected by the JuggleTheNumbers website
 	def export_text(self, button):
@@ -1728,6 +1759,7 @@ class Model_Notebook:
 	### Clear the model table.
 	def clear(self):
 		self.all_view.get_model().clear()
+		self.calc_progress.set_visible(False)
 
 	### Restart the calculation thread.  Kill any previously started threads before starting a new one.
 	def kick_thread(self):
@@ -1738,22 +1770,26 @@ class Model_Notebook:
 		self.calc_thread = threading.Thread(target=self.repop)
 		self.calc_thread.start()
 		
+	def do_recalc(self, button):
+		kickthr = threading.Thread(target=self.kick_thread)
+		kickthr.start()
 	### Callback from the notebook to kick off the model calculation
-	def do_recalc(self, notebook, page_NOUSE, page_num):
-		if notebook.get_tab_label(notebook.get_nth_page(page_num)).get_text() == "Model":
-			kickthr = threading.Thread(target=self.kick_thread)
-			kickthr.start()
+	#def do_recalc(self, notebook, page_NOUSE, page_num):
+	#	if notebook.get_tab_label(notebook.get_nth_page(page_num)).get_text() == "Model":
+	#		kickthr = threading.Thread(target=self.kick_thread)
+	#		kickthr.start()
 
 	### Recalculate the models for all teams
 	def repop(self):
 		gtk.gdk.threads_enter()
+		self.calc_progress.set_visible(True)
 		self.calc_progress.set_fraction(0)
 		self.calc_progress.set_text("Calculating...")		
 		gtk.gdk.threads_leave()
-		basic_pts = self.basic_model_calc()
+		basic_pts = self.basic_model_calc(self.parent.date_cal.get_date())
 		if self.thread_sig.wait(0.01):
 			return
-		eap_ppg = self.eap_model_calc()
+		eap_ppg = self.eap_model_calc(self.parent.date_cal.get_date())
 		if self.thread_sig.wait(0.01):
 			return
 
@@ -1777,6 +1813,7 @@ class Model_Notebook:
 
 		self.calc_progress.set_fraction(1)
 		self.calc_progress.set_text("Calculation Complete")		
+		self.calc_progress.set_visible(False)
 		gtk.gdk.threads_leave()
 
 
@@ -2045,7 +2082,7 @@ class Results_Notebook:
 		self.parent.results_note_vbox.pack_start(self.list_hbox)
 
 		scrolled_window = gtk.ScrolledWindow()
-		scrolled_window.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_NEVER)
+		scrolled_window.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
 		self.list_hbox.pack_start(scrolled_window)
 
 		
@@ -2483,21 +2520,27 @@ class Base:
 
 		self.combo_hbox = gtk.HBox(spacing=10)
 		self.window_vbox.pack_start(self.combo_hbox, expand = False)
+		self.combo_vbox = gtk.VBox(spacing=5)
+		self.combo_hbox.pack_start(self.combo_vbox, expand = False)
 
 		self.league_vbox = gtk.VBox(spacing=5)
-		self.combo_hbox.add(self.league_vbox)
+		self.combo_vbox.add(self.league_vbox)
 
 		self.league_combo = League_Combo(self)
 
 		self.season_vbox = gtk.VBox(spacing=5)
-		self.combo_hbox.add(self.season_vbox)
+		self.combo_vbox.add(self.season_vbox)
 
 		self.season_combo = Season_Combo(self)
 
 		self.conference_vbox = gtk.VBox(spacing=5)
-		self.combo_hbox.add(self.conference_vbox)
+		self.combo_vbox.add(self.conference_vbox)
 
 		self.conf_combo = Conference_Combo(self)
+
+		self.date_vbox = gtk.VBox(spacing=5)
+		self.combo_hbox.pack_start(self.date_vbox, expand=False)
+		self.date_cal = Date_Calendar(self)
 
 		self.notebook = gtk.Notebook()
 		self.window_vbox.add(self.notebook)
@@ -2557,6 +2600,7 @@ class Base:
 
 		self.league_combo.repop()
 		self.window.show_all()
+		self.model_note.calc_progress.set_visible(False)
 
 		return
 
