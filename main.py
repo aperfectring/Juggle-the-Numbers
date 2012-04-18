@@ -1701,6 +1701,14 @@ class Model_Notebook:
 		self.calc_progress = gtk.ProgressBar()
 		self.parent.model_note_vbox.pack_start(self.calc_progress, expand = False)
 
+		self.hfa_label = gtk.Label("HFA Adjust Value:")
+		self.hfa_entry = gtk.Entry()
+		self.hfa_hbox = gtk.HBox(spacing=10)
+		self.hfa_hbox.set_border_width(5)
+		self.hfa_hbox.pack_start(self.hfa_label)
+		self.hfa_hbox.pack_start(self.hfa_entry)
+		self.parent.model_note_vbox.pack_start(self.hfa_hbox, expand = False)
+
 		self.calc_button = gtk.Button("Recalculate")
 		self.parent.model_note_vbox.pack_start(self.calc_button, expand = False)
 		self.calc_button.connect('clicked', self.do_recalc)
@@ -1897,6 +1905,8 @@ class Model_Notebook:
 
 		if(hfa_adj == 0):
 			hfa_adj = 0.01
+
+		self.hfa_entry.set_text(str(hfa_adj))
 
 		gtk.gdk.threads_enter()
 		season_id = self.parent.season_combo.get_id()
