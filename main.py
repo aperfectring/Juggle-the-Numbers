@@ -2336,6 +2336,72 @@ class Guru_Notebook:
 		self.parent.guru_note_vbox.pack_start(self.recalc_button, expand = False)
 		self.recalc_button.connect('clicked', self.repop)
 
+		self.hg_label = gtk.Label("HG:")
+		self.ag_label = gtk.Label("AG:")
+		self.hg_spin = gtk.SpinButton()
+		self.hg_spin.set_range(0,100)
+		self.hg_spin.set_increments(1,1)
+		self.ag_spin = gtk.SpinButton()
+		self.ag_spin.set_range(0,100)
+		self.ag_spin.set_increments(1,1)
+		self.goals_hbox = gtk.HBox(spacing=10)
+		self.goals_hbox.set_border_width(5)
+		self.goals_hbox.pack_start(self.hg_label)
+		self.goals_hbox.pack_start(self.hg_spin)
+		self.goals_hbox.pack_start(self.ag_label)
+		self.goals_hbox.pack_start(self.ag_spin)
+		self.parent.guru_note_vbox.pack_start(self.goals_hbox, expand = False)
+		
+		self.prob_label = gtk.Label("Probability:")
+		self.prob_entry = gtk.Entry()
+		self.prob_recalc_button = gtk.Button("Recalculate Probability")
+		self.prob_recalc_button.connect('clicked', self.repop_prob)
+		self.prob_hbox = gtk.HBox(spacing=10)
+		self.prob_hbox.set_border_width(5)
+		self.prob_hbox.pack_start(self.prob_label)
+		self.prob_hbox.pack_start(self.prob_entry)
+		self.prob_hbox.pack_start(self.prob_recalc_button)
+		self.parent.guru_note_vbox.pack_start(self.prob_hbox, expand = False)
+
+	def repop_prob(self, button):
+		model = self.all_view.get_model()
+		if self.all_view.get_cursor()[0]:
+			season_id = str(self.parent.season_combo.get_id())
+			itera = model.iter_nth_child(None, self.all_view.get_cursor()[0][0])
+			home_abbr = model.get_value(itera, 1)
+			away_abbr = model.get_value(itera, 2)
+			(home, home_city, home_abbr, home_id) = get_team_from_abbr(self.parent.cur, home_abbr, season_id)
+			(away, away_city, away_abbr, away_id) = get_team_from_abbr(self.parent.cur, away_abbr, season_id)
+
+			start_date = self.start_cal.get_date()
+			start_date_str = str(start_date[0]) + "-" + str(start_date[1]+1).zfill(2) + "-" + str(start_date[2]).zfill(2)
+			league_home_gf = self.parent.table_note.fetch_home_goals(start_date_str)
+			league_away_gf = self.parent.table_note.fetch_away_goals(start_date_str)
+			if(league_away_gf != 0):
+				hfa_adj = math.sqrt(float(league_home_gf) / float(league_away_gf))
+			else:
+				hfa_adj = 1.0
+
+			if(hfa_adj == 0):
+				hfa_adj = 0.01
+			
+			home_gf = float(self.parent.table_note.fetch_gf(int(home_id), start_date_str))
+			home_ga = float(self.parent.table_note.fetch_ga(int(home_id), start_date_str))
+			home_gp = float(self.parent.table_note.fetch_gp(int(home_id), start_date_str))
+
+			away_gf = float(self.parent.table_note.fetch_gf(int(away_id), start_date_str))
+			away_ga = float(self.parent.table_note.fetch_ga(int(away_id), start_date_str))
+			away_gp = float(self.parent.table_note.fetch_gp(int(away_id), start_date_str))
+			
+			home_exp_gf = self.parent.model_note.basic_model_exp_goals_cal(home_gf, away_ga, home_gp, away_gp, hfa_adj)
+			away_exp_gf = self.parent.model_note.basic_model_exp_goals_cal(away_gf, home_ga, away_gp, home_gp, 1/hfa_adj)
+
+			home_prob = poisson_pmf(self.hg_spin.get_value(), home_exp_gf)
+			away_prob = poisson_pmf(self.ag_spin.get_value(), away_exp_gf)
+			prob = home_prob * away_prob
+			self.prob_entry.set_text(str(prob))
+		
+
 	def clear(self):
 		self.all_view.get_model().clear()
 
@@ -2345,6 +2411,7 @@ class Guru_Notebook:
 		end_date = self.end_cal.get_date()
 		all_list = self.all_view.get_model()
 		all_list.clear()
+		self.prob_entry.set_text("")
 
 		start_date_str = str(start_date[0]) + "-" + str(start_date[1]+1).zfill(2) + "-" + str(start_date[2]).zfill(2)
 		end_date_str = str(end_date[0]) + "-" + str(end_date[1]+1).zfill(2) + "-" + str(end_date[2]).zfill(2)
