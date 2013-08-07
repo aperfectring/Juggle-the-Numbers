@@ -1158,11 +1158,17 @@ class Games_Notebook:
 	### Add the appropriate teams (from the team_season table) to the specified combo box.
 	def pop_team_combo(self, combo):
 		row = None
+		team_list = []
 		self.parent.cur.execute("SELECT team_id FROM team_season WHERE (season_id='" + str(self.parent.season_combo.get_id()) + "')")
 		for row in self.parent.cur.fetchall():
 			self.parent.cur.execute("SELECT abbr FROM teams WHERE (id='" + str(row[0]) + "')")
 			for name in self.parent.cur.fetchall():
-				combo.append_text(name[0])
+				#combo.append_text(name[0])
+				team_list.append(name[0])
+		team_list.sort()
+		for name in team_list:
+			combo.append_text(name)
+
 		if row:
 			combo.set_active(0)
 
@@ -1538,13 +1544,19 @@ class Table_Notebook:
 		all_list = self.all_view.get_model()
 		all_list.clear()
 
+		team_list = []
+
 		if conf_id == None:
 			self.parent.cur.execute("SELECT team_id FROM team_season WHERE (season_id = '" + str(season_id) + "')")
 		else:
 			self.parent.cur.execute("SELECT team_id FROM team_season WHERE (season_id = '" + str(season_id) + "' AND conf_id = '" + str(conf_id) + "')")
 		for row in self.parent.cur.fetchall():
-			team_id = row[0]
-			self.parent.cur.execute("SELECT team_name FROM teams WHERE id = '" + str(row[0]) + "'")
+			team_list.append(get_team_from_id(self.parent.cur, row[0]))
+		team_list.sort()
+
+		for row in team_list:
+			team_id = row[3]
+			self.parent.cur.execute("SELECT team_name FROM teams WHERE id = '" + str(row[3]) + "'")
 			team_name = self.parent.cur.fetchone()[0]
 
 			games_played = self.fetch_gp(team_id, self.parent.date_cal.get_date())
@@ -1835,10 +1847,14 @@ class Model_Notebook:
 		else:
 			self.parent.cur.execute("SELECT team_id FROM team_season WHERE (season_id = '" + str(season_id) + "' AND conf_id = '" + str(conf_id) + "')")
 		gtk.gdk.threads_enter()
+
+		team_list = []
 		for team in self.parent.cur.fetchall():
-			self.parent.cur.execute("SELECT team_name FROM teams WHERE id = '" + str(team[0]) + "'")
-			team_name = self.parent.cur.fetchone()[0]
-			all_list.append( (team_name, basic_pts[team[0]], eap_ppg[team[0]]) )
+			team_list.append(get_team_from_id(self.parent.cur, team[0]))
+		team_list.sort()
+
+		for team in team_list:
+			all_list.append( (team[0], basic_pts[team[3]], eap_ppg[team[3]]) )
 
 		self.calc_progress.set_fraction(1)
 		self.calc_progress.set_text("Calculation Complete")		
@@ -2150,10 +2166,15 @@ class Results_Notebook:
 				column = gtk.TreeViewColumn(str(n+1), gtk.CellRendererText(), text=(n*2+1), background=(n*2+2))
 				self.all_view.append_column(column)
 
+		team_list = []
 		### For each team in the league...
 		self.parent.cur.execute("SELECT team_id FROM team_season WHERE season_id = '" + str(season_id) + "'")
 		for row in self.parent.cur.fetchall():
-			team_id = row[0]
+			team_list.append(get_team_from_id(self.parent.cur, row[0]))
+		team_list.sort()
+
+		for row in team_list:
+			team_id = row[3]
 			(name, city, abbr, team_id) = get_team_from_id(self.parent.cur, team_id)
 			team_row = [name]
 
@@ -2608,6 +2629,18 @@ class Base:
 				return
 			self.cur.execute("SELECT number FROM version")
 			row = self.cur.fetchone()
+
+		self.cur.execute("SELECT * FROM leagues")
+		print "Found",len(self.cur.fetchall()),"leagues."
+
+		self.cur.execute("SELECT * FROM seasons")
+		print "Found",len(self.cur.fetchall()),"seasons."
+
+		self.cur.execute("SELECT * FROM teams")
+		print "Found",len(self.cur.fetchall()),"teams."
+
+		self.cur.execute("SELECT * FROM games")
+		print "Found",len(self.cur.fetchall()),"games."
 
 		self.window = gtk.Window(gtk.WINDOW_TOPLEVEL)
 		self.window.connect('destroy', lambda w: gtk.main_quit())
