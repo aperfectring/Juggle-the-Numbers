@@ -1029,7 +1029,8 @@ class Games_Notebook:
 						gobject.TYPE_STRING,	# AET
 						gobject.TYPE_STRING,	# PKs
 						gobject.TYPE_STRING,	# Style
-						gobject.TYPE_STRING)	# Played
+						gobject.TYPE_STRING,	# Played
+						gobject.TYPE_STRING)    # Attendance
 
 		self.all_view = gtk.TreeView()
 		scrolled_window.add(self.all_view)
@@ -1079,6 +1080,10 @@ class Games_Notebook:
 		column.set_sort_column_id(10)
 		self.all_view.append_column(column)
 
+		column = gtk.TreeViewColumn("Attendance", gtk.CellRendererText(), text=11)
+		column.set_sort_column_id(11)
+		self.all_view.append_column(column)
+
 		self.gameops_hbox = gtk.HBox(spacing=10)
 		self.gameops_hbox.set_border_width(5)
 		self.parent.games_note_vbox.pack_end(self.gameops_hbox, expand=False)
@@ -1105,7 +1110,8 @@ class Games_Notebook:
 		self.parent.cur.execute("SELECT date, " + 
 						"home_id, home_goals, home_pks, " + 
 						"away_id, away_goals, away_pks, " +
-						"aet, pks, game_style, played " +
+						"aet, pks, game_style, played, " +
+						"attendance " + 
 					"FROM games WHERE (season_id='" + str(sid) + "')")
 		for row in self.parent.cur.fetchall():
 			self.parent.cur.execute("SELECT abbr FROM teams WHERE (id='" + str(row[1]) + "')")
@@ -1116,12 +1122,13 @@ class Games_Notebook:
 			for team_names in self.parent.cur.fetchall():
 				away_text = team_names[0]
 
-			all_list.append( (row[0], home_text, row[2], row[3], away_text, row[5], row[6], row[7], row[8], style_text_array[row[9]], row[10]) )
+			all_list.append( (row[0], home_text, row[2], row[3], away_text, row[5], row[6], row[7], row[8], style_text_array[row[9]], row[10], row[11]) )
 
 		self.parent.table_note.repop()
 		self.parent.results_note.repop()
 		self.parent.guru_note.clear()
 		self.parent.model_note.clear()
+		self.parent.atten_note.repop()
 
 	### Get the game information tuple from the treeview
 	def get_game(self, view):
@@ -1139,6 +1146,7 @@ class Games_Notebook:
 			pks = all_list.get_value(itera, 8)
 			style = all_list.get_value(itera, 9)
 			played = all_list.get_value(itera, 10)
+			attendance = all_list.get_value(itera, 11)
 		else:
 			date = None
 			home = None
@@ -1151,9 +1159,11 @@ class Games_Notebook:
 			pks = None
 			style = None
 			played = None
+			attendance = None
 		return (date,	home, home_goals, home_pks,
 				away, away_goals, away_pks,
-				aet, pks, style, played)
+				aet, pks, style, played,
+				attendance)
 
 	### Add the appropriate teams (from the team_season table) to the specified combo box.
 	def pop_team_combo(self, combo):
@@ -1184,7 +1194,7 @@ class Games_Notebook:
 		(date,
 			home, home_goals, home_pks,
 			away, away_goals, away_pks,
-			aet, pks, style, played) = self.get_game(self.all_view)
+			aet, pks, style, played, attendance) = self.get_game(self.all_view)
 		if date == None:
 			return
 		season_id_text = str(self.parent.season_combo.get_id())
@@ -1216,7 +1226,7 @@ class Games_Notebook:
 			(date,
 				home_abbr, home_goals, home_pks,
 				away_abbr, away_goals, away_pks,
-				aet, pks, style, played) = self.get_game(self.all_view)
+				aet, pks, style, played, attendance) = self.get_game(self.all_view)
 			if date == None:
 				edit = False
 
@@ -1333,6 +1343,21 @@ class Games_Notebook:
 		style_combo.show()
 		et_hbox.pack_start(style_combo)
 
+		############# Attendance Stuff ################
+		atten_hbox = gtk.HBox(spacing=10)
+		atten_hbox.set_border_width(5)
+		atten_hbox.show()
+		dialog.vbox.pack_start(atten_hbox)
+
+		atten_label = gtk.Label("Attendance:")
+		atten_label.show()
+		atten_hbox.pack_start(atten_label)
+		atten_spin = gtk.SpinButton()
+		atten_spin.set_range(-1,1000000)
+		atten_spin.set_increments(100,1000)
+		atten_spin.set_value(-1)
+		atten_spin.show()
+		atten_hbox.pack_start(atten_spin)
 
 		season_id_text = str(self.parent.season_combo.get_id())
 
@@ -1363,6 +1388,13 @@ class Games_Notebook:
 			for index in range(0,len(model)):
 				if model[index][0] == style:
 					style_combo.set_active(index)
+
+			if attendance == "NULL":
+				atten_spin.set_value(-1)
+			elif attendance:
+				atten_spin.set_value(int(attendance))
+			else:
+				atten_spin.set_value(-1)
 		else:
 			## If we are adding a game, get the latest date of a game in the list to
 			##   provide a relavent starting date.  If no games exist, use the start
@@ -1410,6 +1442,9 @@ class Games_Notebook:
 			index = style_combo.get_active()
 			style_text = model[index][0]
 			style_num_text = str(index)
+			atten_text = str(atten_spin.get_value_as_int())
+			if atten_spin.get_value_as_int() == -1:
+				atten_text = ""
 
 			(home_text, home_city_text, home_abbr_text, home_id) = get_team_from_abbr(self.parent.cur, home_abbr_text, season_id_text)
 			(away_text, away_city_text, away_abbr_text, away_id) = get_team_from_abbr(self.parent.cur, away_abbr_text, season_id_text)
@@ -1435,8 +1470,9 @@ class Games_Notebook:
 									"away_pks = '"   + away_pks_text   + "', " +
 									"aet = '"        + aet_text        + "', " +
 									"pks = '"        + pks_text        + "', " +
-									"game_style = '" + style_num_text  + "', "  +
-									"played = '"     + played_text     + "' "  +
+									"game_style = '" + style_num_text  + "', " +
+									"played = '"     + played_text     + "', " +
+									"attendance = '" + atten_text      + "' "  +
 								"WHERE (season_id = '" + season_id_text + "' AND " +
 									"home_id = '" + orig_home_id_text + "' AND " +
 									"away_id = '" + orig_away_id_text + "' AND " +
@@ -1445,7 +1481,8 @@ class Games_Notebook:
 					self.parent.cur.execute("INSERT INTO games (season_id, date, " + 
 											"home_id, home_goals, home_pks, " + 
 											"away_id, away_goals, away_pks, " +
-											"aet, pks, game_style, played) " +
+											"aet, pks, game_style, played, " +
+											"attendance) " +
 										"VALUES (" +
 											"'" + season_id_text  + "', " +
 											"'" + date_text       + "', " +
@@ -1458,7 +1495,8 @@ class Games_Notebook:
 											"'" + aet_text        + "', " +
 											"'" + pks_text        + "', " +
 											"'" + style_num_text  + "', " +
-											"'" + played_text     + "')")
+											"'" + played_text     + "', " +
+											"'" + atten_text      + "')")
 										
 
 				self.parent.db.commit()
@@ -2548,6 +2586,525 @@ class Guru_Notebook:
 			### Put this massive amount of data calculated into the treeview.
 			all_list.append((row[2], home_abbr, away_abbr, home_win_chance*100, tie_chance*100, away_win_chance*100, max_prob_str, max_exp_guru_pts_home_str, max(max_exp_guru_pts_home), max_exp_guru_pts_away_str, max(max_exp_guru_pts_away), max_exp_guru_pts_tie_str, max(max_exp_guru_pts_tie)))
 
+class Attendance_Notebook:
+	def __init__(self, parent):
+		self.parent = parent
+
+		self.home_combo = gtk.combo_box_new_text()
+		self.parent.atten_note_vbox.pack_start(self.home_combo, expand = False)
+		self.home_combo.append_text("Home")
+		self.home_combo.append_text("Away")
+		self.home_combo.set_active(0)
+
+		self.atten_hbox = gtk.HBox(spacing=10)
+		self.atten_hbox.set_border_width(5)
+		self.parent.atten_note_vbox.pack_start(self.atten_hbox, expand = False)
+
+		self.oa_vbox = gtk.VBox(spacing=10)
+		self.oa_vbox.set_border_width(5)
+		self.atten_hbox.pack_start(self.oa_vbox)
+
+		### Overall played
+		self.oa_played_hbox = gtk.HBox(spacing=10)
+		self.oa_played_hbox.set_border_width(5)
+		self.oa_vbox.pack_start(self.oa_played_hbox, expand = False)
+
+		self.oa_played_label = gtk.Label("Games Played:")
+		self.oa_played_hbox.pack_start(self.oa_played_label)
+
+		self.oa_played_entry = gtk.Entry()
+		self.oa_played_entry.set_editable(False)
+		self.oa_played_entry.set_width_chars(4)
+		self.oa_played_hbox.pack_start(self.oa_played_entry)
+
+		### Overall Attendance Count
+		self.oa_count_hbox = gtk.HBox(spacing=10)
+		self.oa_count_hbox.set_border_width(5)
+		self.oa_vbox.pack_start(self.oa_count_hbox, expand = False)
+
+		self.oa_count_label = gtk.Label("Total:")
+		self.oa_count_hbox.pack_start(self.oa_count_label)
+
+		self.oa_count_entry = gtk.Entry()
+		self.oa_count_entry.set_editable(False)
+		self.oa_count_entry.set_width_chars(10)
+		self.oa_count_hbox.pack_start(self.oa_count_entry)
+
+		### Overall Average Attendance
+		self.oa_avg_hbox = gtk.HBox(spacing=10)
+		self.oa_avg_hbox.set_border_width(5)
+		self.oa_vbox.pack_start(self.oa_avg_hbox, expand = False)
+
+		self.oa_avg_label = gtk.Label("Average:")
+		self.oa_avg_hbox.pack_start(self.oa_avg_label)
+
+		self.oa_avg_entry = gtk.Entry()
+		self.oa_avg_entry.set_editable(False)
+		self.oa_avg_entry.set_width_chars(6)
+		self.oa_avg_hbox.pack_start(self.oa_avg_entry)
+
+		### Overall Median Attendance
+		self.oa_median_hbox = gtk.HBox(spacing=10)
+		self.oa_median_hbox.set_border_width(5)
+		self.oa_vbox.pack_start(self.oa_median_hbox, expand = False)
+
+		self.oa_median_label = gtk.Label("Median:")
+		self.oa_median_hbox.pack_start(self.oa_median_label)
+
+		self.oa_median_entry = gtk.Entry()
+		self.oa_median_entry.set_editable(False)
+		self.oa_median_entry.set_width_chars(6)
+		self.oa_median_hbox.pack_start(self.oa_median_entry)
+
+		### Overall Max Attendance
+		self.oa_max_hbox = gtk.HBox(spacing=10)
+		self.oa_max_hbox.set_border_width(5)
+		self.oa_vbox.pack_start(self.oa_max_hbox, expand = False)
+
+		self.oa_max_label = gtk.Label("Max:")
+		self.oa_max_hbox.pack_start(self.oa_max_label)
+
+		self.oa_max_entry = gtk.Entry()
+		self.oa_max_entry.set_editable(False)
+		self.oa_max_entry.set_width_chars(7)
+		self.oa_max_hbox.pack_start(self.oa_max_entry)
+
+		### Overall Min Attendance
+		self.oa_min_hbox = gtk.HBox(spacing=10)
+		self.oa_min_hbox.set_border_width(5)
+		self.oa_vbox.pack_start(self.oa_min_hbox, expand = False)
+
+		self.oa_min_label = gtk.Label("Min:")
+		self.oa_min_hbox.pack_start(self.oa_min_label)
+
+		self.oa_min_entry = gtk.Entry()
+		self.oa_min_entry.set_editable(False)
+		self.oa_min_entry.set_width_chars(6)
+		self.oa_min_hbox.pack_start(self.oa_min_entry)
+
+		### Overall stddev Attendance
+		self.oa_stddev_hbox = gtk.HBox(spacing=10)
+		self.oa_stddev_hbox.set_border_width(5)
+		self.oa_vbox.pack_start(self.oa_stddev_hbox, expand = False)
+
+		self.oa_stddev_label = gtk.Label("Standard Deviation:")
+		self.oa_stddev_hbox.pack_start(self.oa_stddev_label)
+
+		self.oa_stddev_entry = gtk.Entry()
+		self.oa_stddev_entry.set_editable(False)
+		self.oa_stddev_entry.set_width_chars(6)
+		self.oa_stddev_hbox.pack_start(self.oa_stddev_entry)
+
+		self.oa_hsep = gtk.HSeparator()
+		self.oa_vbox.pack_start(self.oa_hsep, expand = False)
+
+		### Overall Range Attendance
+		self.oa_range_label = gtk.Label("Games Within Range")
+		self.oa_vbox.pack_start(self.oa_range_label, expand = False)
+
+		self.oa_range_hbox = gtk.HBox(spacing=10)
+		self.oa_range_hbox.set_border_width(5)
+		self.oa_vbox.pack_start(self.oa_range_hbox, expand = False)
+
+		self.oa_min_range_label = gtk.Label("Min:")
+		self.oa_range_hbox.pack_start(self.oa_min_range_label)
+
+		self.oa_min_range_spin = gtk.SpinButton()
+		self.oa_min_range_spin.set_range(-1000000,1000000)
+		self.oa_min_range_spin.set_increments(100,1000)
+		self.oa_min_range_spin.set_value(0)
+		self.oa_min_range_spin.set_width_chars(8)
+		self.oa_range_hbox.pack_start(self.oa_min_range_spin)
+
+		self.oa_max_range_label = gtk.Label("Max:")
+		self.oa_range_hbox.pack_start(self.oa_max_range_label)
+
+		self.oa_max_range_spin = gtk.SpinButton()
+		self.oa_max_range_spin.set_range(-1000000,1000000)
+		self.oa_max_range_spin.set_increments(100,1000)
+		self.oa_max_range_spin.set_value(1000000)
+		self.oa_max_range_spin.set_width_chars(7)
+		self.oa_range_hbox.pack_start(self.oa_max_range_spin)
+
+		self.oa_range_count_hbox = gtk.HBox(spacing=10)
+		self.oa_range_count_hbox.set_border_width(5)
+		self.oa_vbox.pack_start(self.oa_range_count_hbox, expand = False)
+
+		self.oa_range_count_num_label = gtk.Label("Count:")
+		self.oa_range_count_hbox.pack_start(self.oa_range_count_num_label)
+
+		self.oa_range_count_num_entry = gtk.Entry()
+		self.oa_range_count_num_entry.set_editable(False)
+		self.oa_range_count_num_entry.set_width_chars(4)
+		self.oa_range_count_hbox.pack_start(self.oa_range_count_num_entry)
+
+		self.oa_range_count_percent_label = gtk.Label("Percentage:")
+		self.oa_range_count_hbox.pack_start(self.oa_range_count_percent_label)
+
+		self.oa_range_count_percent_entry = gtk.Entry()
+		self.oa_range_count_percent_entry.set_editable(False)
+		self.oa_range_count_percent_entry.set_width_chars(7)
+		self.oa_range_count_hbox.pack_start(self.oa_range_count_percent_entry)
+
+		self.vsep = gtk.VSeparator()
+		self.atten_hbox.pack_start(self.vsep, expand = False)
+
+		self.pt_vbox = gtk.VBox(spacing=10)
+		self.pt_vbox.set_border_width(5)
+		self.atten_hbox.pack_start(self.pt_vbox)
+
+		### Per Team drop-menu
+		self.pt_team_combo = gtk.combo_box_new_text()
+		self.pt_vbox.pack_start(self.pt_team_combo, expand = False)
+
+		### Per Team played
+		self.pt_played_hbox = gtk.HBox(spacing=10)
+		self.pt_played_hbox.set_border_width(5)
+		self.pt_vbox.pack_start(self.pt_played_hbox, expand = False)
+
+		self.pt_played_label = gtk.Label("Games Played:")
+		self.pt_played_hbox.pack_start(self.pt_played_label)
+
+		self.pt_played_entry = gtk.Entry()
+		self.pt_played_entry.set_editable(False)
+		self.pt_played_entry.set_width_chars(4)
+		self.pt_played_hbox.pack_start(self.pt_played_entry)
+
+		### Per Team Attendance Count
+		self.pt_count_hbox = gtk.HBox(spacing=10)
+		self.pt_count_hbox.set_border_width(5)
+		self.pt_vbox.pack_start(self.pt_count_hbox, expand = False)
+
+		self.pt_count_label = gtk.Label("Total:")
+		self.pt_count_hbox.pack_start(self.pt_count_label)
+
+		self.pt_count_entry = gtk.Entry()
+		self.pt_count_entry.set_editable(False)
+		self.pt_count_entry.set_width_chars(10)
+		self.pt_count_hbox.pack_start(self.pt_count_entry)
+
+		### Per Team Average Attendance
+		self.pt_avg_hbox = gtk.HBox(spacing=10)
+		self.pt_avg_hbox.set_border_width(5)
+		self.pt_vbox.pack_start(self.pt_avg_hbox, expand = False)
+
+		self.pt_avg_label = gtk.Label("Average:")
+		self.pt_avg_hbox.pack_start(self.pt_avg_label)
+
+		self.pt_avg_entry = gtk.Entry()
+		self.pt_avg_entry.set_editable(False)
+		self.pt_avg_entry.set_width_chars(6)
+		self.pt_avg_hbox.pack_start(self.pt_avg_entry)
+
+		### Per Team Median Attendance
+		self.pt_median_hbox = gtk.HBox(spacing=10)
+		self.pt_median_hbox.set_border_width(5)
+		self.pt_vbox.pack_start(self.pt_median_hbox, expand = False)
+
+		self.pt_median_label = gtk.Label("Median:")
+		self.pt_median_hbox.pack_start(self.pt_median_label)
+
+		self.pt_median_entry = gtk.Entry()
+		self.pt_median_entry.set_editable(False)
+		self.pt_median_entry.set_width_chars(6)
+		self.pt_median_hbox.pack_start(self.pt_median_entry)
+
+		### Per Team Max Attendance
+		self.pt_max_hbox = gtk.HBox(spacing=10)
+		self.pt_max_hbox.set_border_width(5)
+		self.pt_vbox.pack_start(self.pt_max_hbox, expand = False)
+
+		self.pt_max_label = gtk.Label("Max:")
+		self.pt_max_hbox.pack_start(self.pt_max_label)
+
+		self.pt_max_entry = gtk.Entry()
+		self.pt_max_entry.set_editable(False)
+		self.pt_max_entry.set_width_chars(7)
+		self.pt_max_hbox.pack_start(self.pt_max_entry)
+
+		### Per Team Min Attendance
+		self.pt_min_hbox = gtk.HBox(spacing=10)
+		self.pt_min_hbox.set_border_width(5)
+		self.pt_vbox.pack_start(self.pt_min_hbox, expand = False)
+
+		self.pt_min_label = gtk.Label("Min:")
+		self.pt_min_hbox.pack_start(self.pt_min_label)
+
+		self.pt_min_entry = gtk.Entry()
+		self.pt_min_entry.set_editable(False)
+		self.pt_min_entry.set_width_chars(6)
+		self.pt_min_hbox.pack_start(self.pt_min_entry)
+
+		### Per Team stddev Attendance
+		self.pt_stddev_hbox = gtk.HBox(spacing=10)
+		self.pt_stddev_hbox.set_border_width(5)
+		self.pt_vbox.pack_start(self.pt_stddev_hbox, expand = False)
+
+		self.pt_stddev_label = gtk.Label("Standard Deviation:")
+		self.pt_stddev_hbox.pack_start(self.pt_stddev_label)
+
+		self.pt_stddev_entry = gtk.Entry()
+		self.pt_stddev_entry.set_editable(False)
+		self.pt_stddev_entry.set_width_chars(6)
+		self.pt_stddev_hbox.pack_start(self.pt_stddev_entry)
+
+		self.pt_hsep = gtk.HSeparator()
+		self.pt_vbox.pack_start(self.pt_hsep, expand = False)
+
+		### Per Team Range Attendance
+		self.pt_range_label = gtk.Label("Games Within Range")
+		self.pt_vbox.pack_start(self.pt_range_label, expand = False)
+
+		self.pt_range_hbox = gtk.HBox(spacing=10)
+		self.pt_range_hbox.set_border_width(5)
+		self.pt_vbox.pack_start(self.pt_range_hbox, expand = False)
+
+		self.pt_min_range_label = gtk.Label("Min:")
+		self.pt_range_hbox.pack_start(self.pt_min_range_label)
+
+		self.pt_min_range_spin = gtk.SpinButton()
+		self.pt_min_range_spin.set_range(-1000000,1000000)
+		self.pt_min_range_spin.set_increments(100,1000)
+		self.pt_min_range_spin.set_value(0)
+		self.pt_min_range_spin.set_width_chars(8)
+		self.pt_range_hbox.pack_start(self.pt_min_range_spin)
+
+		self.pt_max_range_label = gtk.Label("Max:")
+		self.pt_range_hbox.pack_start(self.pt_max_range_label)
+
+		self.pt_max_range_spin = gtk.SpinButton()
+		self.pt_max_range_spin.set_range(-1000000,1000000)
+		self.pt_max_range_spin.set_increments(100,1000)
+		self.pt_max_range_spin.set_value(1000000)
+		self.pt_max_range_spin.set_width_chars(7)
+		self.pt_range_hbox.pack_start(self.pt_max_range_spin)
+
+		self.pt_range_count_hbox = gtk.HBox(spacing=10)
+		self.pt_range_count_hbox.set_border_width(5)
+		self.pt_vbox.pack_start(self.pt_range_count_hbox, expand = False)
+
+		self.pt_range_count_num_label = gtk.Label("Count:")
+		self.pt_range_count_hbox.pack_start(self.pt_range_count_num_label)
+
+		self.pt_range_count_num_entry = gtk.Entry()
+		self.pt_range_count_num_entry.set_editable(False)
+		self.pt_range_count_num_entry.set_width_chars(4)
+		self.pt_range_count_hbox.pack_start(self.pt_range_count_num_entry)
+
+		self.pt_range_count_percent_label = gtk.Label("Percentage:")
+		self.pt_range_count_hbox.pack_start(self.pt_range_count_percent_label)
+
+		self.pt_range_count_percent_entry = gtk.Entry()
+		self.pt_range_count_percent_entry.set_editable(False)
+		self.pt_range_count_percent_entry.set_width_chars(7)
+		self.pt_range_count_hbox.pack_start(self.pt_range_count_percent_entry)
+
+		self.recalc_button = gtk.Button("Recalculate")
+		self.parent.atten_note_vbox.pack_start(self.recalc_button, expand = False)
+		self.recalc_button.connect('clicked', self.repop_button)
+
+	### Add the appropriate teams (from the team_season table) to the specified combo box.
+	def pop_team_combo(self, combo):
+		row = None
+		team_list = []
+		self.parent.cur.execute("SELECT team_id FROM team_season WHERE (season_id='" + str(self.parent.season_combo.get_id()) + "')")
+		for row in self.parent.cur.fetchall():
+			self.parent.cur.execute("SELECT abbr FROM teams WHERE (id='" + str(row[0]) + "')")
+			for name in self.parent.cur.fetchall():
+				#combo.append_text(name[0])
+				team_list.append(name[0])
+		team_list.sort()
+		for name in team_list:
+			combo.append_text(name)
+
+		if row:
+			combo.set_active(0)
+
+	def repop_button(self, button):
+		self.repop()
+
+	def repop(self):
+		season_id = self.parent.season_combo.get_id()
+		conf_id = self.parent.conf_combo.get_id()
+
+		model = self.pt_team_combo.get_model()
+		if len(model) > 0:
+			index = self.pt_team_combo.get_active()
+			per_team_info = get_team_from_abbr(self.parent.cur, model[index][0], str(season_id))
+			for index in range(0, len(model)):
+				self.pt_team_combo.remove_text(0)
+		else:
+			per_team_info = (None, None, None, None)
+
+		model = self.home_combo.get_model()
+		index = self.home_combo.get_active()
+		if model[index][0] == "Home":
+			calc_col_text = "home_id"
+			oth_col_text = "away_id"
+		else:
+			calc_col_text = "away_id"
+			oth_col_text = "home_id"
+
+		date = self.parent.date_cal.get_date()
+			
+		oa_game_list = []
+		if date == None:
+			date_today = datetime.date.today()
+			date = date_today.isoformat()
+		if conf_id == None:
+			self.parent.cur.execute("SELECT attendance FROM games WHERE (season_id = '" + str(season_id) + "' AND played = 'TRUE' AND date <= '" + date + "' AND attendance NOT NULL )")
+		else:
+			self.parent.cur.execute("SELECT attendance FROM games WHERE (season_id = '" + str(season_id) + "' AND played = 'TRUE' AND date <= '" + date + "' AND attendance NOT NULL AND " + calc_col_text + " IN (SELECT team_id FROM team_season WHERE (season_id = '" + str(season_id) + "' AND conf_id = '" + str(conf_id) + "') ) )")
+		for row in self.parent.cur.fetchall():
+			oa_game_list.append(row[0])
+		oa_game_list.sort()
+		oa_attendance = sum(oa_game_list)
+		oa_games_played = len(oa_game_list)
+
+		if oa_games_played == 0:
+			oa_median = 0
+			oa_max = 0
+			oa_min = 0
+			oa_average = 0
+			oa_stddev = 0
+			oa_range_count_num = 0
+			oa_range_count_percent = 0.0
+		elif oa_games_played % 2 == 0:
+			oa_median = int(round(float(oa_game_list[oa_games_played / 2] + oa_game_list[oa_games_played / 2 - 1])/2,0))
+		else:
+			oa_median = oa_game_list[oa_games_played / 2]
+
+		if oa_games_played != 0:
+			oa_max = max(oa_game_list)
+			oa_min = min(oa_game_list)
+
+			oa_dev_list = []
+			oa_average = float(oa_attendance)/float(oa_games_played)
+			oa_range_min = self.oa_min_range_spin.get_value()
+			oa_range_max = self.oa_max_range_spin.get_value()
+			if oa_range_min < 0:
+				oa_range_min = oa_average + oa_range_min
+				oa_range_max = oa_average + oa_range_max
+			oa_range_count_num = 0
+			for game in oa_game_list:
+				oa_dev_list.append(pow(float(game) - float(int(oa_average)), 2))
+				if game >= oa_range_min:
+					if game <= oa_range_max:
+						oa_range_count_num += 1
+			oa_stddev = pow(sum(oa_dev_list)/oa_games_played , 0.5)
+			oa_range_count_percent = float(oa_range_count_num) / float(oa_games_played) * float(100)
+			
+
+		self.oa_played_entry.set_text(str(oa_games_played))
+		self.oa_count_entry.set_text(str(oa_attendance))
+		self.oa_avg_entry.set_text(str(int(round(oa_average,0))))
+		self.oa_median_entry.set_text(str(oa_median))
+		self.oa_max_entry.set_text(str(oa_max))
+		self.oa_min_entry.set_text(str(oa_min))
+		self.oa_stddev_entry.set_text(str(int(round(oa_stddev,0))))
+		self.oa_range_count_num_entry.set_text(str(oa_range_count_num))
+		self.oa_range_count_percent_entry.set_text("{}%".format(round(oa_range_count_percent,1)))
+
+		if per_team_info[3]:
+			pt_game_list = []
+			if conf_id == None:
+				self.parent.cur.execute("SELECT attendance FROM games WHERE (season_id = '" + str(season_id) + "' AND played = 'TRUE' AND date <= '" + date + "' AND attendance NOT NULL AND " + calc_col_text + " = '" + str(per_team_info[3]) + "')")
+			else:
+				self.parent.cur.execute("SELECT attendance FROM games WHERE (season_id = '" + str(season_id) + "' AND played = 'TRUE' AND date <= '" + date + "' AND attendance NOT NULL AND " + calc_col_text + " = '" + str(per_team_info[3]) + "' AND " + oth_col_text + " IN (SELECT team_id FROM team_season WHERE (season_id = '" + str(season_id) + "' AND conf_id = '" + str(conf_id) + "') ) )")
+
+			for row in self.parent.cur.fetchall():
+				pt_game_list.append(row[0])
+			pt_game_list.sort()
+			pt_attendance = sum(pt_game_list)
+			pt_games_played = len(pt_game_list)
+
+			if pt_games_played == 0:
+				pt_median = 0
+				pt_max = 0
+				pt_min = 0
+				pt_average = 0
+				pt_stddev = 0
+				pt_range_count_num = 0
+				pt_range_count_percent = 0.0
+			elif pt_games_played % 2 == 0:
+				pt_median = (pt_game_list[pt_games_played / 2] + pt_game_list[pt_games_played / 2 - 1])/2
+			else:
+				pt_median = pt_game_list[pt_games_played / 2]
+
+			if pt_games_played != 0:
+				pt_max = max(pt_game_list)
+				pt_min = min(pt_game_list)
+
+				pt_dev_list = []
+				pt_average = float(pt_attendance)/float(pt_games_played)
+				pt_range_min = self.pt_min_range_spin.get_value()
+				pt_range_max = self.pt_max_range_spin.get_value()
+				if pt_range_min < 0:
+					pt_range_min = pt_average + pt_range_min
+					pt_range_max = pt_average + pt_range_max
+				pt_range_count_num = 0
+				for game in pt_game_list:
+					pt_dev_list.append(pow(float(game) - float(int(pt_average)), 2))
+					if game >= pt_range_min:
+						if game <= pt_range_max:
+							pt_range_count_num += 1
+				pt_stddev = pow(sum(pt_dev_list)/pt_games_played , 0.5)
+				pt_range_count_percent = float(pt_range_count_num) / float(pt_games_played) * float(100)
+			
+		else:
+			pt_games_played = 0
+			pt_attendance = 0
+			pt_median = 0
+			pt_max = 0
+			pt_min = 0
+			pt_average = 0
+			pt_stddev = 0
+			pt_range_count_num = 0
+			pt_range_count_percent = 0.0
+
+		self.pt_played_entry.set_text(str(pt_games_played))
+		self.pt_count_entry.set_text(str(pt_attendance))
+		self.pt_avg_entry.set_text(str(int(round(pt_average,0))))
+		self.pt_median_entry.set_text(str(pt_median))
+		self.pt_max_entry.set_text(str(pt_max))
+		self.pt_min_entry.set_text(str(pt_min))
+		self.pt_stddev_entry.set_text(str(int(round(pt_stddev,0))))
+		self.pt_range_count_num_entry.set_text(str(pt_range_count_num))
+		self.pt_range_count_percent_entry.set_text("{}%".format(round(pt_range_count_percent,1)))
+
+
+
+
+		self.pop_team_combo(self.pt_team_combo)
+		model = self.pt_team_combo.get_model()
+		self.pt_team_combo.set_active(0)
+
+		if per_team_info:
+			for index in range(0,len(model)):
+				if model[index][0] == per_team_info[2]:
+					self.pt_team_combo.set_active(index)
+
+	### Fetch the games played by the team up to and including the specified date
+	def fetch_gp(self, team, date = None):
+		if date == None:
+			date_today = datetime.date.today()
+			date = date_today.isoformat()
+		season_id = self.parent.season_combo.get_id()
+		self.parent.cur.execute("SELECT COUNT(*) FROM games WHERE (season_id = '" + str(season_id) + "' AND played = 'TRUE' AND date <= '" + date + "' AND home_id = '" + str(team) + "' AND attendance NOT NULL )")
+		games_played = self.parent.cur.fetchone()[0]
+		return games_played
+
+	def fetch_att(self, team, date = None):
+		if date == None:
+			date_today = datetime.date.today()
+			date = date_today.isoformat()
+		season_id = self.parent.season_combo.get_id()
+		self.parent.cur.execute("SELECT SUM(attendance) FROM games WHERE (season_id = '" + str(season_id) + "' AND played = 'TRUE' AND date <= '" + date + "' AND home_id = '" + str(team) + "' AND attendance NOT NULL )")
+		attendance = self.parent.cur.fetchone()[0]
+		if attendance:
+			return attendance
+		return 0
+
 class Base:
 	def __init__(self):
 		gtk.gdk.threads_init()
@@ -2622,7 +3179,13 @@ class Base:
 				self.cur.execute("INSERT INTO version (number) VALUES('4')")
 				self.db.commit()
 			elif(row[0] == 4):
-				print "Got a version 4 DB"
+				print "Got a version 4 DB, upgrading to version 5"
+				self.cur.execute("ALTER TABLE games ADD COLUMN attendance INTEGER")
+				self.cur.execute("DELETE FROM version")
+				self.cur.execute("INSERT INTO version (number) VALUES('5')")
+				self.db.commit()
+			elif(row[0] == 5):
+				print "Got a version 5 DB"
 				break
 			else:
 				print "Error, got an unsupported DB version"
@@ -2728,6 +3291,11 @@ class Base:
 		self.guru_note_vbox.set_border_width(5)
 		self.notebook.append_page(self.guru_note_vbox, gtk.Label("Guru"))
 		self.guru_note = Guru_Notebook(self)
+
+		self.atten_note_vbox = gtk.VBox(spacing=10)
+		self.atten_note_vbox.set_border_width(5)
+		self.notebook.append_page(self.atten_note_vbox, gtk.Label("Attendance"))
+		self.atten_note = Attendance_Notebook(self)
 
 		self.league_combo.repop()
 		self.window.show_all()
