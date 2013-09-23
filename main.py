@@ -11,6 +11,7 @@ import traceback
 import datetime
 import math
 import threading
+import sys
 
 ### Gets team information tuple based on the team_id number
 def get_team_from_id(cur, myid):
@@ -1238,6 +1239,7 @@ class Games_Notebook:
 				    (gtk.STOCK_CANCEL, gtk.RESPONSE_REJECT,
 				     gtk.STOCK_OK, gtk.RESPONSE_ACCEPT))
 
+		dialog.set_default_response(gtk.RESPONSE_ACCEPT)
 
 		########## DATE ###########
 		date_vbox = gtk.VBox(spacing=10)
@@ -1272,6 +1274,7 @@ class Games_Notebook:
 		homegoals_spin = gtk.SpinButton()
 		homegoals_spin.set_range(0,100)
 		homegoals_spin.set_increments(1,1)
+		homegoals_spin.set_activates_default(True)
 		homegoals_spin.show()
 		home_hbox.pack_start(homegoals_spin)
 		
@@ -1281,6 +1284,7 @@ class Games_Notebook:
 		homepks_spin = gtk.SpinButton()
 		homepks_spin.set_range(0,100)
 		homepks_spin.set_increments(1,1)
+		homepks_spin.set_activates_default(True)
 		homepks_spin.show()
 		home_hbox.pack_start(homepks_spin)
 
@@ -1305,6 +1309,7 @@ class Games_Notebook:
 		awaygoals_spin = gtk.SpinButton()
 		awaygoals_spin.set_range(0,100)
 		awaygoals_spin.set_increments(1,1)
+		awaygoals_spin.set_activates_default(True)
 		awaygoals_spin.show()
 		away_hbox.pack_start(awaygoals_spin)
 		
@@ -1314,6 +1319,7 @@ class Games_Notebook:
 		awaypks_spin = gtk.SpinButton()
 		awaypks_spin.set_range(0,100)
 		awaypks_spin.set_increments(1,1)
+		awaypks_spin.set_activates_default(True)
 		awaypks_spin.show()
 		away_hbox.pack_start(awaypks_spin)
 
@@ -1355,6 +1361,7 @@ class Games_Notebook:
 		atten_spin = gtk.SpinButton()
 		atten_spin.set_range(-1,1000000)
 		atten_spin.set_increments(100,1000)
+		atten_spin.set_activates_default(True)
 		atten_spin.set_value(-1)
 		atten_spin.show()
 		atten_hbox.pack_start(atten_spin)
@@ -2956,9 +2963,13 @@ class Attendance_Notebook:
 		else:
 			self.parent.cur.execute("SELECT attendance FROM games WHERE (season_id = '" + str(season_id) + "' AND played = 'TRUE' AND date <= '" + date + "' AND attendance NOT NULL AND " + calc_col_text + " IN (SELECT team_id FROM team_season WHERE (season_id = '" + str(season_id) + "' AND conf_id = '" + str(conf_id) + "') ) )")
 		for row in self.parent.cur.fetchall():
-			oa_game_list.append(row[0])
+			if row[0] != '':
+				oa_game_list.append(int(row[0]))
 		oa_game_list.sort()
-		oa_attendance = sum(oa_game_list)
+		if len(oa_game_list) > 0:
+			oa_attendance = sum(oa_game_list)
+		else:
+			oa_attendance = 0
 		oa_games_played = len(oa_game_list)
 
 		if oa_games_played == 0:
@@ -3013,9 +3024,13 @@ class Attendance_Notebook:
 				self.parent.cur.execute("SELECT attendance FROM games WHERE (season_id = '" + str(season_id) + "' AND played = 'TRUE' AND date <= '" + date + "' AND attendance NOT NULL AND " + calc_col_text + " = '" + str(per_team_info[3]) + "' AND " + oth_col_text + " IN (SELECT team_id FROM team_season WHERE (season_id = '" + str(season_id) + "' AND conf_id = '" + str(conf_id) + "') ) )")
 
 			for row in self.parent.cur.fetchall():
-				pt_game_list.append(row[0])
+				if row[0] != '':
+					pt_game_list.append(row[0])
 			pt_game_list.sort()
-			pt_attendance = sum(pt_game_list)
+			if len(pt_game_list) > 0:
+				pt_attendance = sum(pt_game_list)
+			else:
+				pt_attendance = 0
 			pt_games_played = len(pt_game_list)
 
 			if pt_games_played == 0:
@@ -3106,10 +3121,13 @@ class Attendance_Notebook:
 		return 0
 
 class Base:
-	def __init__(self):
+	def __init__(self, dbname = None):
 		gtk.gdk.threads_init()
 
-		self.db = sqlite3.connect("test.sqlite", check_same_thread = False)
+		if dbname == None:
+			dbname = "test.sqlite"
+		print "Opening database",dbname
+		self.db = sqlite3.connect(dbname, check_same_thread = False)
 		self.cur = self.db.cursor()
 		self.cur.execute("CREATE TABLE IF NOT EXISTS leagues (" +
                                     "league_name STRING UNIQUE, " +
@@ -3311,5 +3329,8 @@ class Base:
 		gtk.gdk.threads_leave()
 
 if __name__ == "__main__":
-	base = Base()
+	if len(sys.argv) > 1:
+		base = Base(sys.argv[1])
+	else:
+		base = Base()
 	base.main()
