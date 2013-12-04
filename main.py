@@ -3203,7 +3203,25 @@ class Base:
 				self.cur.execute("INSERT INTO version (number) VALUES('5')")
 				self.db.commit()
 			elif(row[0] == 5):
-				print "Got a version 5 DB"
+				print "Got a version 5 DB, upgrading to version 6"
+				self.cur.execute("CREATE TABLE IF NOT EXISTS players (" +
+							"id INTEGER PRIMARY KEY ASC, " +
+							"first_name STRING, " +
+							"last_name STRING, " +
+							"nation STRING, " +
+							"home STRING)")
+				self.cur.execute("CREATE TABLE IF NOT EXISTS player_team (" +
+							"player_id INTEGER, " +
+							"team_id INTEGER, " +
+							"start DATE, " +
+							"end DATE, " +
+							"loan BOOL, " +
+							"number INTEGER)")
+				self.cur.execute("DELETE FROM version")
+				self.cur.execute("INSERT INTO version (number) VALUES('6')")
+				self.db.commit()
+			elif(row[0] == 6):
+				print "Got a version 6 DB"
 				break
 			else:
 				print "Error, got an unsupported DB version"
