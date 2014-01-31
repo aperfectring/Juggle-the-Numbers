@@ -7,6 +7,7 @@ class Season_Notebook:
 		self.db_cursor = db_cursor
 		self.db_handle = db_handle
 		self.get_season_id = get_season_id
+		self.callback_list = []
 
 		self.start_hbox = gtk.HBox(spacing=10)
 		self.start_hbox.set_border_width(5)
