@@ -1,12 +1,11 @@
 import gtk
 
 class League_Combo:
-	def __init__(self, parent_box, db_cursor, db_handle, league_notebook, season_combo):
+	def __init__(self, parent_box, db_cursor, db_handle):
 		self.parent_box = parent_box
 		self.db_cursor = db_cursor
 		self.db_handle = db_handle
-		self.league_notebook = league_notebook
-		self.season_combo = season_combo
+		self.callback_list = []
 		
 		self.label = gtk.Label("League:")
 		self.parent_box.pack_start(self.label, expand=False)
@@ -19,27 +18,28 @@ class League_Combo:
 		self.parent_box.pack_start(self.button, expand=False)
 		self.button.connect('clicked', self.add)
 
-	### Callback for when the league combobox is changed
-	###    Updates the league notebook page.
-	###    Also deletes all entries from the season combobox, then adds the appropriate ones for this league
-	def update(self, combobox):
-		model = combobox.get_model()
-		index = combobox.get_active()
+	### Register with the class for callbacks on updates
+	def register(self, callback):
+		self.callback_list.append(callback)
+
+	### Get the currently selected value from the combo box.
+	def get_selected(self):
+		model = self.combo.get_model()
+		index = self.combo.get_active()
+		name = None
 
 		if index >= 0:
 			name = model[index][0]
 
-			### Fetches all the league information from the database
-			self.db_cursor.execute("SELECT country, confederation, level " + 
-        	                                   "FROM leagues WHERE league_name = '" + name + "'")
+		return name
+		
 
-			for row in self.db_cursor:
-				if row:
-					self.league_notebook.set(name = name, country = row[0], confed = row[1], level = row[2])
+	### Callback for when the league combobox is changed
+	###    Calls all registered callbacks in the order they were registered
+	def update(self, combobox):
+		for callback in self.callback_list:
+			callback()
 
-
-		### Delete all season combobox entries, then populate the combobox with appropriate ones for this league
-		self.season_combo.repop()
 		return
 
 	### Callback for the "Add league" button

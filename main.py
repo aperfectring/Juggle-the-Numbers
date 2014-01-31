@@ -135,6 +135,20 @@ class League_Notebook:
 		self.parent.league_note_vbox.pack_end(self.update_button, expand=False)
 		self.update_button.connect('clicked', self.update)
 
+		self.parent.league_combo.register(self.repop)
+
+	def repop(self):
+		print "League Notebook repop"
+		name = self.parent.league_combo.get_selected()
+		
+		self.parent.cur.execute("SELECT country, confederation, level " +
+						"FROM leagues WHERE league_name = '" +
+						name +
+						"'")
+		for row in self.parent.cur:
+			if row:
+				self.set(name = name, country = row[0], confed = row[1], level = row[2])
+
 	### Callback for the "Update" button on the league notebook page
 	###    Commits all data from the league notebook page to the database
 	###    Updates the league combobox string to reflect any changes made
@@ -183,6 +197,8 @@ class Season_Combo:
 		self.button = gtk.Button("Add Season")
 		self.parent.season_vbox.pack_start(self.button, expand=False)
 		self.button.connect('clicked', self.add)
+
+		self.parent.league_combo.register(self.repop)
 
 	### Callback handler for when the season combobox changes
 	###   Updates the season notebook page
@@ -262,6 +278,7 @@ class Season_Combo:
 	### Deletes all season combobox entries, then repopulates the combobox with appriopriate ones for this season
 	###   Will attempt to select an entry which has the value of select_val, if specified
 	def repop(self, select_val = None):
+		print "Season Combo repop"
 		league_id = self.parent.league_combo.get_id()
 		model = self.combo.get_model()
 		for index in range(0, len(model)):
@@ -3169,6 +3186,8 @@ class Base:
 		self.league_vbox = gtk.VBox(spacing=5)
 		self.combo_vbox.add(self.league_vbox)
 
+		self.league_combo = League_Combo.League_Combo(self.league_vbox, self.cur, self.db)
+		
 		self.season_vbox = gtk.VBox(spacing=5)
 		self.combo_vbox.add(self.season_vbox)
 
@@ -3193,8 +3212,6 @@ class Base:
 
 		self.league_note = League_Notebook(self)
 
-		self.league_combo = League_Combo.League_Combo(self.league_vbox, self.cur, self.db, self.league_note, self.season_combo)
-		
 		self.season_note_vbox = gtk.VBox(spacing=10)
 		self.season_note_vbox.set_border_width(5)
 		self.notebook.append_page(self.season_note_vbox, gtk.Label("Season"))
