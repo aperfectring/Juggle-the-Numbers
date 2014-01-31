@@ -179,7 +179,6 @@ class Season_Combo:
 	### Deletes all season combobox entries, then repopulates the combobox with appriopriate ones for this season
 	###   Will attempt to select an entry which has the value of select_val, if specified
 	def repop(self, select_val = None):
-		print "Season Combo repop"
 		league_id = self.parent.league_combo.get_id()
 		model = self.combo.get_model()
 		for index in range(0, len(model)):
@@ -3111,7 +3110,15 @@ class Base:
 		self.league_note_vbox.set_border_width(5)
 		self.notebook.append_page(self.league_note_vbox, gtk.Label("League"))
 
-		self.league_note = League_Notebook.League_Notebook(self)
+		self.league_note = League_Notebook.League_Notebook(self.league_note_vbox, self.cur, self.db, self.league_combo.get_selected)
+
+		# When the League Combo selection changes,
+		# the League Notebook needs to be repopulated
+		self.league_combo.register(self.league_note.repop)
+
+		# When the League Notebook updates the DB,
+		# the League Combo needs to be repopulated
+		self.league_note.register(self.league_combo.repop)
 
 		self.season_note_vbox = gtk.VBox(spacing=10)
 		self.season_note_vbox.set_border_width(5)
