@@ -15,7 +15,7 @@ class Season_Combo:
 
 		self.combo = gtk.combo_box_new_text()
 		self.parent_box.pack_start(self.combo, expand=False)
-		self.combo.connect('changed', self.update)
+		self.combo_changed_id = self.combo.connect('changed', self.update)
 
 		self.button = gtk.Button("Add Season")
 		self.parent_box.pack_start(self.button, expand=False)
@@ -28,14 +28,6 @@ class Season_Combo:
 	### Callback handler for when the season combobox changes
 	###   Updates the season notebook page
 	def update(self, combobox):
-		### We will get this callback when we are deleting all entries in the season combobox, so we
-		###   only want to actually try to update the notebook page if we are changing to a valid
-		###   index
-		index = self.combo.get_active()
-		if(index < 0):
-			return
-
-		season_id = self.get_id()
 		for callback in self.callback_list:
 			callback()
 
@@ -91,6 +83,7 @@ class Season_Combo:
 	### Deletes all season combobox entries, then repopulates the combobox with appriopriate ones for this season
 	###   Will attempt to select an entry which has the value of select_val, if specified
 	def repop(self, select_val = None):
+		self.combo.disconnect(self.combo_changed_id)
 		league_id = self.get_league_id()
 		model = self.combo.get_model()
 		for index in range(0, len(model)):
@@ -109,6 +102,7 @@ class Season_Combo:
 			elif row != None:
 				self.combo.append_text("")
 		model = self.combo.get_model()
+		self.combo_changed_id = self.combo.connect('changed', self.update)
 		if select_val != None:
 			for index in range(0, len(model)):
 				if model[index][0] == select_val:
