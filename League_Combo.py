@@ -12,7 +12,7 @@ class League_Combo:
 
 		self.combo = gtk.combo_box_new_text()
 		self.parent_box.pack_start(self.combo, expand=False)
-		self.combo.connect('changed', self.update)
+		self.combo_changed_id = self.combo.connect('changed', self.update)
 
 		self.button = gtk.Button("Add League")
 		self.parent_box.pack_start(self.button, expand=False)
@@ -76,6 +76,7 @@ class League_Combo:
 	### Deletes all season combobox entries, then repopulates the combobox with appriopriate ones for this season
 	###   Will attempt to select an entry which has the value of select_val, if specified
 	def repop(self, select_val = None):
+		self.combo.disconnect(self.combo_changed_id)
 		model = self.combo.get_model()
 		for index in range(0, len(model)):
 			self.combo.remove_text(0)
@@ -85,6 +86,7 @@ class League_Combo:
 			self.combo.append_text(row[0])
 
 		model = self.combo.get_model()
+		self.combo_changed_id = self.combo.connect('changed', self.update)
 		if select_val != None:
 			for index in range(0, len(model)):
 				if model[index][0] == select_val:
