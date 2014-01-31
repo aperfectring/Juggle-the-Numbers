@@ -86,7 +86,7 @@ class League_Notebook:
 		self.db_handle.commit()
 
 		for callback in self.callback_list:
-			callback()
+			callback(self.name_entry.get_text())
 
 	def set(self, name = "", confed = "", level = "", country = ""):
 
