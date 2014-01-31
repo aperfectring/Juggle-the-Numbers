@@ -3169,8 +3169,6 @@ class Base:
 		self.league_vbox = gtk.VBox(spacing=5)
 		self.combo_vbox.add(self.league_vbox)
 
-		self.league_combo = League_Combo.League_Combo(self)
-
 		self.season_vbox = gtk.VBox(spacing=5)
 		self.combo_vbox.add(self.season_vbox)
 
@@ -3194,6 +3192,8 @@ class Base:
 		self.notebook.append_page(self.league_note_vbox, gtk.Label("League"))
 
 		self.league_note = League_Notebook(self)
+
+		self.league_combo = League_Combo.League_Combo(self.league_vbox, self.cur, self.db, self.league_note, self.season_combo)
 		
 		self.season_note_vbox = gtk.VBox(spacing=10)
 		self.season_note_vbox.set_border_width(5)

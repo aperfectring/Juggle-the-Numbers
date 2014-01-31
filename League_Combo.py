@@ -1,18 +1,22 @@
 import gtk
 
 class League_Combo:
-	def __init__(self, parent):
-		self.parent = parent
+	def __init__(self, parent_box, db_cursor, db_handle, league_notebook, season_combo):
+		self.parent_box = parent_box
+		self.db_cursor = db_cursor
+		self.db_handle = db_handle
+		self.league_notebook = league_notebook
+		self.season_combo = season_combo
 		
 		self.label = gtk.Label("League:")
-		self.parent.league_vbox.pack_start(self.label, expand=False)
+		self.parent_box.pack_start(self.label, expand=False)
 
 		self.combo = gtk.combo_box_new_text()
-		self.parent.league_vbox.pack_start(self.combo, expand=False)
+		self.parent_box.pack_start(self.combo, expand=False)
 		self.combo.connect('changed', self.update)
 
 		self.button = gtk.Button("Add League")
-		self.parent.league_vbox.pack_start(self.button, expand=False)
+		self.parent_box.pack_start(self.button, expand=False)
 		self.button.connect('clicked', self.add)
 
 	### Callback for when the league combobox is changed
@@ -26,16 +30,16 @@ class League_Combo:
 			name = model[index][0]
 
 			### Fetches all the league information from the database
-			self.parent.cur.execute("SELECT country, confederation, level " + 
+			self.db_cursor.execute("SELECT country, confederation, level " + 
         	                                   "FROM leagues WHERE league_name = '" + name + "'")
 
-			for row in self.parent.cur:
+			for row in self.db_cursor:
 				if row:
-					self.parent.league_note.set(name = name, country = row[0], confed = row[1], level = row[2])
+					self.league_notebook.set(name = name, country = row[0], confed = row[1], level = row[2])
 
 
 		### Delete all season combobox entries, then populate the combobox with appropriate ones for this league
-		self.parent.season_combo.repop()
+		self.season_combo.repop()
 		return
 
 	### Callback for the "Add league" button
@@ -44,7 +48,7 @@ class League_Combo:
 	def add(self, button):
 		text = ""
 		try:
-			self.parent.cur.execute("INSERT INTO leagues (league_name)VALUES ('" + text + "')")
+			self.db_cursor.execute("INSERT INTO leagues (league_name)VALUES ('" + text + "')")
 		except sqlite3.IntegrityError:
 			model = self.combo.get_model()
 
@@ -54,7 +58,7 @@ class League_Combo:
 			if (model[index][0] == text):
 				self.combo.set_active(index)
 
-		self.parent.db.commit()
+		self.db_handle.commit()
 
 	### Determine the League Unique database ID based on the currently selected league from the combobox
 	def get_id(self):
@@ -62,8 +66,8 @@ class League_Combo:
 		index = self.combo.get_active()
 		if (index < 0):
 			return None
-		self.parent.cur.execute("SELECT id FROM leagues WHERE league_name = '" + model[index][0] + "'")
-		for row in self.parent.cur:
+		self.db_cursor.execute("SELECT id FROM leagues WHERE league_name = '" + model[index][0] + "'")
+		for row in self.db_cursor:
 			if row != None and row[0] != None:
 				return row[0]
 			else:
@@ -76,8 +80,8 @@ class League_Combo:
 		for index in range(0, len(model)):
 			self.combo.remove_text(0)
 
-		self.parent.cur.execute("SELECT league_name FROM leagues")
-                for row in self.parent.cur:
+		self.db_cursor.execute("SELECT league_name FROM leagues")
+                for row in self.db_cursor:
 			self.combo.append_text(row[0])
 
 		model = self.combo.get_model()
