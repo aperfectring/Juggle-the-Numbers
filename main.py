@@ -154,6 +154,23 @@ class Season_Notebook:
 			if(day != None):
 				self.end_cal.select_day(int(day))
 
+	def repop(self):
+		season_id = self.parent.season_combo.get_id()
+
+		### Decode the starting year month and day from the season entry in the database		
+		self.parent.cur.execute("SELECT STRFTIME('%Y',start), STRFTIME('%m',start), STRFTIME('%d',start) " + 
+                                           "FROM seasons WHERE id = '" + str(season_id) + "'")
+		for row in self.parent.cur:
+			if row != None:
+				self.set_start(year = row[0], month = row[1], day = row[2])
+
+		### Decode the ending year month and day from the season entry in the database		
+		self.parent.cur.execute("SELECT STRFTIME('%Y',end), STRFTIME('%m',end), STRFTIME('%d',end) " + 
+                                           "FROM seasons WHERE id = '" + str(season_id) + "'")
+		for row in self.parent.cur:
+			if row != None:
+				self.set_end(year = row[0], month = row[1], day = row[2])
+
 class Conference_Combo:
 	def __init__(self, parent):
 		self.parent = parent
@@ -2971,7 +2988,7 @@ class Base:
 		self.season_vbox = gtk.VBox(spacing=5)
 		self.combo_vbox.add(self.season_vbox)
 
-		self.season_combo = Season_Combo.Season_Combo(self)
+		self.season_combo = Season_Combo.Season_Combo(self.season_vbox, self.cur, self.db, self.league_combo.get_id)
 
 		self.conference_vbox = gtk.VBox(spacing=5)
 		self.combo_vbox.add(self.conference_vbox)
@@ -2996,6 +3013,10 @@ class Base:
 		# the League Notebook needs to be repopulated
 		self.league_combo.register(self.league_note.repop)
 
+		# When the League Combo selection changes,
+		# the Season Combo needs to be repopulated
+		self.league_combo.register(self.season_combo.repop)
+
 		# When the League Notebook updates the DB,
 		# the League Combo needs to be repopulated
 		self.league_note.register(self.league_combo.repop)
@@ -3006,11 +3027,19 @@ class Base:
 
 		self.season_note = Season_Notebook(self)
 
+		# When the Season Combo selection changes,
+		# the Season Notebook needs to be repopulated
+		self.season_combo.register(self.season_note.repop)
+
 		self.confs_note_vbox = gtk.VBox(spacing=10)
 		self.confs_note_vbox.set_border_width(5)
 		self.notebook.append_page(self.confs_note_vbox, gtk.Label("Confs"))
 
 		self.conf_note = Conference_Notebook(self)
+
+		# When the Season Combo selection changes,
+		# the Conference Notebook needs to be repopulated
+		self.season_combo.register(self.conf_note.repop)
 
 		self.teams_note_vbox = gtk.VBox(spacing=10)
 		self.teams_note_vbox.set_border_width(5)
