@@ -5,7 +5,6 @@ import pygtk
 pygtk.require('2.0')
 import gtk
 import gobject
-import sqlite3
 import re
 import traceback
 import datetime
@@ -18,6 +17,7 @@ import League_Combo
 import League_Notebook
 import Season_Combo
 import Season_Notebook
+import JTN_db
 
 ### Gets team information tuple based on the team_id number
 def get_team_from_id(cur, myid):
@@ -2767,122 +2767,9 @@ class Base:
 	def __init__(self, dbname = None):
 		gtk.gdk.threads_init()
 
-		if dbname == None:
-			dbname = "test.sqlite"
-		print "Opening database",dbname
-		self.db = sqlite3.connect(dbname, check_same_thread = False)
-		self.cur = self.db.cursor()
-		self.cur.execute("CREATE TABLE IF NOT EXISTS leagues (" +
-                                    "league_name STRING UNIQUE, " +
-                                    "id INTEGER PRIMARY KEY ASC, " + 
-                                    "country STRING, " + 
-                                    "confederation STRING, " + 
-                                    "level INTEGER)")
-		self.cur.execute("CREATE TABLE IF NOT EXISTS seasons (" + 
-                                    "start DATE, " + 
-                                    "end DATE, " + 
-                                    "id INTEGER PRIMARY KEY ASC, " + 
-                                    "league INTEGER)")
-		self.cur.execute("CREATE TABLE IF NOT EXISTS teams (" +
-		                    "id INTEGER PRIMARY KEY ASC, " +
-		                    "team_name STRING UNIQUE, " +
-		                    "city STRING)")
-		self.cur.execute("CREATE TABLE IF NOT EXISTS team_season (" +
-		                    "team_id INTEGER, " +
-		                    "season_id INTEGER)")
-		self.cur.execute("CREATE TABLE IF NOT EXISTS games (" +
-				    "season_id INTEGER, " +
-				    "date DATE, " +
-				    "home_id INTEGER, " +
-				    "home_goals INTEGER, " +
-				    "home_pks INTEGER, " +
-				    "away_id INTEGER, " +
-				    "away_goals INTEGER, " +
-				    "away_pks INTEGER, " +
-				    "aet BOOL, " +
-				    "pks BOOL, " +
-				    "played BOOL, " +
-				    "game_style INTEGER, " +
-				    "id INTEGER PRIMARY KEY ASC)")
-		self.cur.execute("CREATE TABLE IF NOT EXISTS version (" +
-				    "number INTEGER)")
-		
-		self.cur.execute("SELECT number FROM version")
-		row = self.cur.fetchone()
-		if(row == None):
-			print "Adding version number to table"
-			self.cur.execute("INSERT INTO version (number) VALUES('1')")
-			self.db.commit()
-		self.cur.execute("SELECT number FROM version")
-		row = self.cur.fetchone()
-		while (row != None):
-			if(row[0] == 1):
-				print "Got a version 1 DB, upgrading to version 2"
-				self.cur.execute("ALTER TABLE teams ADD COLUMN abbr STRING")
-				self.cur.execute("DELETE FROM version")
-				self.cur.execute("INSERT INTO version (number) VALUES('2')")
-				self.db.commit()
-			elif(row[0] == 2):
-				print "Got a version 2 DB, upgrading to version 3"
-				self.cur.execute("CREATE TABLE IF NOT EXISTS season_confs (" +
-							"season_id INTEGER, " +
-							"conf_id INTEGER)")
-				self.cur.execute("CREATE TABLE IF NOT EXISTS confs (" +
-							"conf_id INTEGER PRIMARY KEY ASC, " +
-							"conf_name STRING)")
-				self.cur.execute("DELETE FROM version")
-				self.cur.execute("INSERT INTO version (number) VALUES('3')")
-				self.db.commit()
-			elif(row[0] == 3):
-				print "Got a version 3 DB, upgrading to version 4"
-				self.cur.execute("ALTER TABLE team_season ADD COLUMN conf_id INTEGER")
-				self.cur.execute("DELETE FROM version")
-				self.cur.execute("INSERT INTO version (number) VALUES('4')")
-				self.db.commit()
-			elif(row[0] == 4):
-				print "Got a version 4 DB, upgrading to version 5"
-				self.cur.execute("ALTER TABLE games ADD COLUMN attendance INTEGER")
-				self.cur.execute("DELETE FROM version")
-				self.cur.execute("INSERT INTO version (number) VALUES('5')")
-				self.db.commit()
-			elif(row[0] == 5):
-				print "Got a version 5 DB, upgrading to version 6"
-				self.cur.execute("CREATE TABLE IF NOT EXISTS players (" +
-							"id INTEGER PRIMARY KEY ASC, " +
-							"first_name STRING, " +
-							"last_name STRING, " +
-							"nation STRING, " +
-							"home STRING)")
-				self.cur.execute("CREATE TABLE IF NOT EXISTS player_team (" +
-							"player_id INTEGER, " +
-							"team_id INTEGER, " +
-							"start DATE, " +
-							"end DATE, " +
-							"loan BOOL, " +
-							"number INTEGER)")
-				self.cur.execute("DELETE FROM version")
-				self.cur.execute("INSERT INTO version (number) VALUES('6')")
-				self.db.commit()
-			elif(row[0] == 6):
-				print "Got a version 6 DB"
-				break
-			else:
-				print "Error, got an unsupported DB version"
-				return
-			self.cur.execute("SELECT number FROM version")
-			row = self.cur.fetchone()
-
-		self.cur.execute("SELECT * FROM leagues")
-		print "Found",len(self.cur.fetchall()),"leagues."
-
-		self.cur.execute("SELECT * FROM seasons")
-		print "Found",len(self.cur.fetchall()),"seasons."
-
-		self.cur.execute("SELECT * FROM teams")
-		print "Found",len(self.cur.fetchall()),"teams."
-
-		self.cur.execute("SELECT * FROM games")
-		print "Found",len(self.cur.fetchall()),"games."
+		self.JTN_db = JTN_db.init(dbname)
+		self.db = self.JTN_db[0]
+		self.cur = self.JTN_db[1]
 
 		self.window = gtk.Window(gtk.WINDOW_TOPLEVEL)
 		self.window.connect('destroy', lambda w: gtk.main_quit())
