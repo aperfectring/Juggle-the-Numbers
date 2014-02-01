@@ -2767,9 +2767,8 @@ class Base:
 	def __init__(self, dbname = None):
 		gtk.gdk.threads_init()
 
-		self.JTN_db = JTN_db.init(dbname)
-		self.db = self.JTN_db[0]
-		self.cur = self.JTN_db[1]
+		self.JTN_db = JTN_db.JTN_db()
+		(self.db, self.cur) = self.JTN_db.open(dbname)
 
 		self.window = gtk.Window(gtk.WINDOW_TOPLEVEL)
 		self.window.connect('destroy', lambda w: gtk.main_quit())
