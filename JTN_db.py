@@ -144,3 +144,19 @@ class JTN_db:
 
 	def commit(self):
 		self.db.commit()
+
+	def add_league(self):
+		text = ""
+		self.cur.execute("INSERT INTO leagues (league_name)VALUES ('" + text + "')")
+
+	def get_league_id(self, league_name):
+		self.cur.execute("SELECT id FROM leagues WHERE league_name = '" + league_name + "'")
+		for row in self.cur:
+			if row != None and row[0] != None:
+				return row[0]
+			else:
+				return None
+		
+	def get_leagues(self):
+		self.cur.execute("SELECT * FROM leagues")
+		return self.cur

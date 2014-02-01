@@ -1,10 +1,9 @@
 import gtk
 
 class League_Combo:
-	def __init__(self, parent_box, db_cursor, db_handle):
+	def __init__(self, parent_box, JTN_db):
 		self.parent_box = parent_box
-		self.db_cursor = db_cursor
-		self.db_handle = db_handle
+		self.JTN_db = JTN_db
 		self.callback_list = []
 		
 		self.label = gtk.Label("League:")
@@ -46,9 +45,8 @@ class League_Combo:
 	###    This will create a "blank" league
 	###    This will leave the newly created league as the currently selected one
 	def add(self, button):
-		text = ""
 		try:
-			self.db_cursor.execute("INSERT INTO leagues (league_name)VALUES ('" + text + "')")
+			self.JTN_db.add_league()
 		except sqlite3.IntegrityError:
 			model = self.combo.get_model()
 
@@ -58,7 +56,7 @@ class League_Combo:
 			if (model[index][0] == text):
 				self.combo.set_active(index)
 
-		self.db_handle.commit()
+		self.JTN_db.commit()
 
 	### Determine the League Unique database ID based on the currently selected league from the combobox
 	def get_id(self):
@@ -66,12 +64,7 @@ class League_Combo:
 		index = self.combo.get_active()
 		if (index < 0):
 			return None
-		self.db_cursor.execute("SELECT id FROM leagues WHERE league_name = '" + model[index][0] + "'")
-		for row in self.db_cursor:
-			if row != None and row[0] != None:
-				return row[0]
-			else:
-				return None
+		return self.JTN_db.get_league_id(model[index][0])
 
 	### Deletes all season combobox entries, then repopulates the combobox with appriopriate ones for this season
 	###   Will attempt to select an entry which has the value of select_val, if specified
@@ -81,8 +74,8 @@ class League_Combo:
 		for index in range(0, len(model)):
 			self.combo.remove_text(0)
 
-		self.db_cursor.execute("SELECT league_name FROM leagues")
-                for row in self.db_cursor:
+		all_rows = self.JTN_db.get_leagues()
+                for row in all_rows:
 			self.combo.append_text(row[0])
 
 		model = self.combo.get_model()

@@ -2785,7 +2785,7 @@ class Base:
 		self.league_vbox = gtk.VBox(spacing=5)
 		self.combo_vbox.add(self.league_vbox)
 
-		self.league_combo = League_Combo.League_Combo(self.league_vbox, self.cur, self.db)
+		self.league_combo = League_Combo.League_Combo(self.league_vbox, self.JTN_db)
 		
 		self.season_vbox = gtk.VBox(spacing=5)
 		self.combo_vbox.add(self.season_vbox)
