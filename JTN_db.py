@@ -149,13 +149,15 @@ class JTN_db:
 		text = ""
 		self.cur.execute("INSERT INTO leagues (league_name)VALUES ('" + text + "')")
 
+	def get_league(self, league_name):
+		self.cur.execute("SELECT * FROM leagues WHERE league_name = '" + league_name + "'")
+		return self.cur.fetchone()
+
 	def get_league_id(self, league_name):
-		self.cur.execute("SELECT id FROM leagues WHERE league_name = '" + league_name + "'")
-		for row in self.cur:
-			if row != None and row[0] != None:
-				return row[0]
-			else:
-				return None
+		row = self.get_league(league_name)
+		if row != None:
+			return row[1]
+		return None
 		
 	def get_leagues(self):
 		self.cur.execute("SELECT * FROM leagues")
