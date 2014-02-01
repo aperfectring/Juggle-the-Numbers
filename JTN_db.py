@@ -162,3 +162,12 @@ class JTN_db:
 	def get_leagues(self):
 		self.cur.execute("SELECT * FROM leagues")
 		return self.cur
+
+	def set_league(self, id, name, country, confed, level):
+		self.cur.execute("UPDATE leagues " + 
+                                 "SET country = '" + country + "', " + 
+                                     "league_name = '" + name + "', " + 
+                                     "confederation = '" + confed + "', " + 
+                                     "level = '" + level + "' " + 
+                                 "WHERE id = '" + str(id) + "'")
+		self.commit()
