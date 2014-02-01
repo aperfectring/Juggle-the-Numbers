@@ -2813,7 +2813,7 @@ class Base:
 		self.league_note_vbox.set_border_width(5)
 		self.notebook.append_page(self.league_note_vbox, gtk.Label("League"))
 
-		self.league_note = League_Notebook.League_Notebook(self.league_note_vbox, self.cur, self.db, self.league_combo.get_selected)
+		self.league_note = League_Notebook.League_Notebook(self.league_note_vbox, self.JTN_db, self.league_combo.get_selected)
 
 		# When the League Combo selection changes,
 		# the League Notebook needs to be repopulated

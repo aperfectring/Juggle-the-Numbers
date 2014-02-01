@@ -2,10 +2,9 @@
 import gtk
 
 class League_Notebook:
-	def __init__(self, parent_box, db_cursor, db_handle, selected_league_func):
+	def __init__(self, parent_box, JTN_db, selected_league_func):
 		self.parent_box = parent_box
-		self.db_cursor = db_cursor
-		self.db_handle = db_handle
+		self.JTN_db = JTN_db
 		self.callback_list = []
 		self.selected_league_func = selected_league_func
 
@@ -64,26 +63,21 @@ class League_Notebook:
 
 	def repop(self):
 		name = self.selected_league_func()
+		row = self.JTN_db.get_league(name)
+		if row:
+			self.set(name = name, country = row[2], confed = row[3], level = row[4])
 
-		self.db_cursor.execute("SELECT country, confederation, level " +
-						"FROM leagues WHERE league_name = '" +
-						name +
-						"'")
-		for row in self.db_cursor:
-			if row:
-				self.set(name = name, country = row[0], confed = row[1], level = row[2])
 
 	### Callback for the "Update" button on the league notebook page
 	###    Commits all data from the league notebook page to the database
 	###    Updates the league combobox string to reflect any changes made
 	def update(self, button):
-		self.db_cursor.execute("UPDATE leagues " + 
-                                           "SET country = '" + self.country_entry.get_text() + "', " + 
-                                              "league_name = '" + self.name_entry.get_text() + "', " + 
-                                              "confederation = '" + self.confed_entry.get_text() + "', " + 
-                                              "level = '" + self.level_entry.get_text() + "' " + 
-                                           "WHERE league_name = '" + self.oldname_label.get_label() + "'")
-		self.db_handle.commit()
+		league_id = self.JTN_db.get_league_id(self.oldname_label.get_label())
+		self.JTN_db.set_league(id = league_id,
+					name = self.name_entry.get_text(),
+					country = self.country_entry.get_text(),
+					confed = self.confed_entry.get_text(),
+					level = self.level_entry.get_text())
 
 		for callback in self.callback_list:
 			callback(self.name_entry.get_text())
