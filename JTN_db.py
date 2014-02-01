@@ -176,4 +176,27 @@ class JTN_db:
 	def add_season(self, league_id):
 		self.cur.execute("INSERT INTO seasons (league) VALUES ('" + str(league_id) + "')")
 		self.commit()
+
+	def get_season(self, league_id, start_year = None, end_year = None):
+		if(end_year == None):
+			end_year = start_year
+
+		### Query the database to get the ID
+		if(start_year != None):
+			self.cur.execute("SELECT * FROM seasons " + 
+                                         "WHERE STRFTIME('%Y',end) = '" + end_year + "' " + 
+                                             "AND STRFTIME('%Y',start) = '" + start_year + "' " + 
+                                             "AND league = '" + str(league_id) + "'")
+		else:
+			self.cur.execute("SELECT * FROM seasons WHERE end IS NULL AND start IS NULL")
+		
+		row = self.cur.fetchone()
+		return row
+
+	def get_seasons(self, league_id):
+		self.cur.execute("SELECT * FROM seasons " + 
+                                 "WHERE league = '" + str(league_id) + "' " + 
+                                     "ORDER BY end DESC")
+		rows = self.cur.fetchall()
+		return rows
 		

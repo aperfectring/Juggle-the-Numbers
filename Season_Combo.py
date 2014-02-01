@@ -3,10 +3,8 @@ import gtk
 import re
 
 class Season_Combo:
-	def __init__(self, parent_box, db_cursor, db_handle, JTN_db, get_league_id):
+	def __init__(self, parent_box, JTN_db, get_league_id):
 		self.parent_box = parent_box
-		self.db_cursor = db_cursor
-		self.db_handle = db_handle
 		self.JTN_db = JTN_db
 		self.callback_list = []
 		self.get_league_id = get_league_id
@@ -62,23 +60,12 @@ class Season_Combo:
 			season_start = seasons[0]
 			if(len(seasons) > 1):
 				season_end = seasons[1]
-		if(season_end == None):
-			season_end = season_start
-
-		### Query the database to get the ID
-		if(season_start != None):
-			self.db_cursor.execute("SELECT id FROM seasons " + 
-                                                   "WHERE STRFTIME('%Y',end) = '" + season_end + "' " + 
-                                                   "AND STRFTIME('%Y',start) = '" + season_start + "' " + 
-                                                   "AND league = '" + str(league_id) + "'")
+		row = self.JTN_db.get_season(league_id, season_start, season_end)
+			
+		if row != None:
+			return row[2]
 		else:
-			self.db_cursor.execute("SELECT id FROM seasons WHERE end IS NULL AND start IS NULL")
-
-		for row in self.db_cursor:
-			if row != None and row[0] != None:
-				return row[0]
-			else:
-				return None
+			return None
 
 	### Deletes all season combobox entries, then repopulates the combobox with appriopriate ones for this season
 	###   Will attempt to select an entry which has the value of select_val, if specified
@@ -89,18 +76,19 @@ class Season_Combo:
 		for index in range(0, len(model)):
 			self.combo.remove_text(0)
 
-		self.db_cursor.execute("SELECT STRFTIME('%Y', start), STRFTIME('%Y', end) " + 
-                                           "FROM seasons " + 
-                                           "WHERE league = '" + str(league_id) + "' " + 
-                                           "ORDER BY end DESC")
-		for row in self.db_cursor:
-			if row != None and row[0] != None and row[1] != None:
-				if row[0] == row[1]:
-					self.combo.append_text(row[0])
-				else:
-					self.combo.append_text(row[0] + "-" + row[1])
-			elif row != None:
+
+		for row in self.JTN_db.get_seasons(league_id):
+
+			if ((row[0] == None) and (row[1] == None)):
 				self.combo.append_text("")
+			else:
+				start_date = re.split('-', row[0])
+				end_date = re.split('-', row[1])
+				if start_date[0] == end_date[0]:
+					self.combo.append_text(start_date[0])
+				else:
+					self.combo.append_text(start_date[0] + "-" + end_date[0])
+
 		model = self.combo.get_model()
 		self.combo_changed_id = self.combo.connect('changed', self.update)
 		if select_val != None:

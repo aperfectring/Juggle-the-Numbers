@@ -2790,7 +2790,7 @@ class Base:
 		self.season_vbox = gtk.VBox(spacing=5)
 		self.combo_vbox.add(self.season_vbox)
 
-		self.season_combo = Season_Combo.Season_Combo(self.season_vbox, self.cur, self.db, self.JTN_db, self.league_combo.get_id)
+		self.season_combo = Season_Combo.Season_Combo(self.season_vbox, self.JTN_db, self.league_combo.get_id)
 
 		# When the League Combo selection changes,
 		# the Season Combo needs to be repopulated
