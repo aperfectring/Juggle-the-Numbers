@@ -11,7 +11,7 @@ class JTN_db:
 		self.cur.execute("ALTER TABLE teams ADD COLUMN abbr STRING")
 		self.cur.execute("DELETE FROM version")
 		self.cur.execute("INSERT INTO version (number) VALUES('2')")
-		self.db.commit()
+		self.commit()
 
 	def upgrade_db_to_v3(self):
 		print "Got a version 2 DB, upgrading to version 3"
@@ -23,21 +23,21 @@ class JTN_db:
 				"conf_name STRING)")
 		self.cur.execute("DELETE FROM version")
 		self.cur.execute("INSERT INTO version (number) VALUES('3')")
-		self.db.commit()
+		self.commit()
 
 	def upgrade_db_to_v4(self):
 		print "Got a version 3 DB, upgrading to version 4"
 		self.cur.execute("ALTER TABLE team_season ADD COLUMN conf_id INTEGER")
 		self.cur.execute("DELETE FROM version")
 		self.cur.execute("INSERT INTO version (number) VALUES('4')")
-		self.db.commit()
+		self.commit()
 
 	def upgrade_db_to_v5(self):
 		print "Got a version 4 DB, upgrading to version 5"
 		self.cur.execute("ALTER TABLE games ADD COLUMN attendance INTEGER")
 		self.cur.execute("DELETE FROM version")
 		self.cur.execute("INSERT INTO version (number) VALUES('5')")
-		self.db.commit()
+		self.commit()
 
 	def upgrade_db_to_v6(self):
 		print "Got a version 5 DB, upgrading to version 6"
@@ -56,7 +56,7 @@ class JTN_db:
 				"number INTEGER)")
 		self.cur.execute("DELETE FROM version")
 		self.cur.execute("INSERT INTO version (number) VALUES('6')")
-		self.db.commit()
+		self.commit()
 	
 	def open(self, dbname = None):
 		if dbname == None:
@@ -105,7 +105,7 @@ class JTN_db:
 		if(row == None):
 			print "Adding version number to table"
 			self.cur.execute("INSERT INTO version (number) VALUES('1')")
-			self.db.commit()
+			self.commit()
 		self.cur.execute("SELECT number FROM version")
 		row = self.cur.fetchone()
 		while (row != None):
@@ -142,3 +142,5 @@ class JTN_db:
 
 		return (self.db, self.cur)
 
+	def commit(self):
+		self.db.commit()
