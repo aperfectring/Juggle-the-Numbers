@@ -3,10 +3,11 @@ import gtk
 import re
 
 class Season_Combo:
-	def __init__(self, parent_box, db_cursor, db_handle, get_league_id):
+	def __init__(self, parent_box, db_cursor, db_handle, JTN_db, get_league_id):
 		self.parent_box = parent_box
 		self.db_cursor = db_cursor
 		self.db_handle = db_handle
+		self.JTN_db = JTN_db
 		self.callback_list = []
 		self.get_league_id = get_league_id
 
@@ -38,8 +39,7 @@ class Season_Combo:
 	###    This will leave the created season as the selected one
 	def add(self, button):
 		league_id = self.get_league_id()
-		self.db_cursor.execute("INSERT INTO seasons (league) VALUES ('" + str(league_id) + "')")
-		self.db_handle.commit()
+		self.JTN_db.add_season(league_id)
 		self.repop('')
 
 	### Determine the Season Unique database ID based on the currently selected season from the combobox	

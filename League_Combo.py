@@ -56,8 +56,6 @@ class League_Combo:
 			if (model[index][0] == text):
 				self.combo.set_active(index)
 
-		self.JTN_db.commit()
-
 	### Determine the League Unique database ID based on the currently selected league from the combobox
 	def get_id(self):
 		model = self.combo.get_model()

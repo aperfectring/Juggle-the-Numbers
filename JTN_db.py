@@ -148,6 +148,7 @@ class JTN_db:
 	def add_league(self):
 		text = ""
 		self.cur.execute("INSERT INTO leagues (league_name)VALUES ('" + text + "')")
+		self.commit()
 
 	def get_league(self, league_name):
 		self.cur.execute("SELECT * FROM leagues WHERE league_name = '" + league_name + "'")
@@ -171,3 +172,8 @@ class JTN_db:
                                      "level = '" + level + "' " + 
                                  "WHERE id = '" + str(id) + "'")
 		self.commit()
+
+	def add_season(self, league_id):
+		self.cur.execute("INSERT INTO seasons (league) VALUES ('" + str(league_id) + "')")
+		self.commit()
+		
