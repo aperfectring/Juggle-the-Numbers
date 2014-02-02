@@ -231,3 +231,27 @@ class JTN_db:
 		self.cur.execute("SELECT * FROM confs")
 		return self.cur.fetchall()
 
+	def add_conf(self, season_id, conf_id):
+		self.cur.execute("INSERT INTO season_confs (conf_id, season_id) VALUES ('" + str(conf_id) + "', '" + str(season_id) + "')")
+		self.commit()
+
+	def remove_conf(self, season_id, conf_id):
+		self.cur.execute("DELETE FROM season_confs WHERE (conf_id = '" + str(conf_id) + "' AND season_id = '" + str(season_id) + "')")
+		self.commit()
+
+	def delete_conf(self, conf_id):
+		self.cur.execute("UPDATE team_season SET conf_id = NULL WHERE conf_id = '" + str(conf_id) + "'")
+		self.cur.execute("DELETE FROM season_confs WHERE (conf_id = '" + str(conf_id) + "')")
+		self.cur.execute("DELETE FROM confs WHERE (conf_id = '" + str(conf_id) + "')")
+		self.commit()
+
+	def set_conf(self, old_name, new_name):
+		self.cur.execute("UPDATE confs " +
+				"SET conf_name = '" + new_name + "'" +
+				"WHERE conf_name = '" + old_name + "'")
+		self.commit()
+
+	def create_conf(self, name):
+		self.cur.execute("INSERT INTO confs (conf_name) " +
+				"VALUES ('" + name + "')")
+		self.commit()

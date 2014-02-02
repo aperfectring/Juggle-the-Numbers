@@ -3,10 +3,8 @@ import gtk
 import gobject
 
 class Conference_Notebook:
-	def __init__(self, parent_box, db_cursor, db_handle, JTN_db, get_season_id):
+	def __init__(self, parent_box, JTN_db, get_season_id):
 		self.parent_box = parent_box
-		self.db_cursor = db_cursor
-		self.db_handle = db_handle
 		self.JTN_db = JTN_db
 		self.get_season_id = get_season_id
 		self.callback_list = []
@@ -137,14 +135,12 @@ class Conference_Notebook:
 
 	def add_conf(self, button):
 		(myid, name) = self.get_conf(self.all_view)
-		self.db_cursor.execute("INSERT INTO season_confs (conf_id, season_id) VALUES ('" + str(myid) + "', '" + str(self.get_season_id()) + "')")
-		self.JTN_db.commit()
+		self.JTN_db.add_conf(self.get_season_id(), myid)
 		self.repop()
 
 	def remove_conf(self, button):
 		(myid, name) = self.get_conf(self.league_view)
-		self.db_cursor.execute("DELETE FROM season_confs WHERE (conf_id = '" + str(myid) + "' AND season_id = '" + str(self.get_season_id()) + "')")
-		self.JTN_db.commit()
+		self.JTN_db.remove_conf(self.get_season_id(), myid)
 		self.repop()
 
 	def delete_conf(self, button, view):
@@ -153,11 +149,7 @@ class Conference_Notebook:
 		all_list = view.get_model()
 		(myid, name) = self.get_conf(view)
 
-		self.db_cursor.execute("UPDATE team_season SET conf_id = NULL WHERE conf_id = '" + str(myid) + "'")
-
-		self.db_cursor.execute("DELETE FROM season_confs WHERE (conf_id = '" + str(myid) + "')")
-		self.db_cursor.execute("DELETE FROM confs WHERE (conf_id = '" + str(myid) + "')")
-		self.JTN_db.commit()
+		self.JTN_db.delete_conf(myid)
 		self.repop()
 
 	def edit_conf(self, button, view):
@@ -197,14 +189,9 @@ class Conference_Notebook:
 		if response == gtk.RESPONSE_ACCEPT:
 			if name_entry.get_text() != "":
 				if edit == True:
-					self.db_cursor.execute("UPDATE confs " +
-									"SET conf_name = '" + name_entry.get_text() + "'" +
-									"WHERE conf_name = '" + name + "'")
+					self.JTN_db.set_conf(name, name_entry.get_text())
 				else:
-					self.db_cursor.execute("INSERT INTO confs (conf_name) " +
-									"VALUES ('" + name_entry.get_text() + "')")
-				self.JTN_db.commit()
-
+					self.JTN_db.create_conf(name_entry.get_text())
 				self.repop()
 
 		dialog.destroy()
