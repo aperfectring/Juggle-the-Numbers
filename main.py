@@ -2748,7 +2748,7 @@ class Base:
 		self.conference_vbox = gtk.VBox(spacing=5)
 		self.combo_vbox.add(self.conference_vbox)
 
-		self.conf_combo = Conference_Combo.Conference_Combo(self.conference_vbox, self.cur, self.db, self.JTN_db, self.season_combo.get_id)
+		self.conf_combo = Conference_Combo.Conference_Combo(self.conference_vbox, self.JTN_db, self.season_combo.get_id)
 
 		self.date_vbox = gtk.VBox(spacing=5)
 		self.combo_hbox.pack_start(self.date_vbox, expand=False)

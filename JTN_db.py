@@ -209,3 +209,19 @@ class JTN_db:
 					"end   = DATE('" + end_date   + "')  " +
 					"WHERE id = '" + str(season_id) + "'")
 		self.commit()
+
+	def get_confs(self, season_id):
+		self.cur.execute("SELECT * FROM season_confs WHERE season_id = '" + str(season_id) + "'")
+		return self.cur.fetchall()
+
+	def get_conf(self, conf_id = None, conf_name = None):
+		if conf_id != None:
+			self.cur.execute("SELECT * FROM confs WHERE conf_id = '" + str(conf_id) + "'")
+			return self.cur.fetchone()
+
+		if conf_name != None:
+			self.cur.execute("SELECT * FROM confs WHERE conf_name = '" + conf_name + "'")
+			return self.cur.fetchone()
+
+		return None
+

@@ -2,10 +2,8 @@
 import gtk
 
 class Conference_Combo:
-	def __init__(self, parent_box, db_cursor, db_handle, JTN_db, get_season_id):
+	def __init__(self, parent_box, JTN_db, get_season_id):
 		self.parent_box = parent_box
-		self.db_cursor = db_cursor
-		self.db_handle = db_handle
 		self.JTN_db = JTN_db
 		self.callback_list = []
 		self.get_season_id = get_season_id
@@ -31,12 +29,10 @@ class Conference_Combo:
 
 		self.combo.append_text("Whole League")
 
-		self.db_cursor.execute("SELECT conf_id FROM season_confs WHERE season_id = '" + str(season_id) + "'")
-		for row in self.db_cursor.fetchall():
-			self.db_cursor.execute("SELECT conf_name FROM confs WHERE conf_id = '" + str(row[0]) + "'")
-			conf_name = self.db_cursor.fetchone()
+		for row in self.JTN_db.get_confs(season_id):
+			(conf_id, conf_name) = self.JTN_db.get_conf(conf_id = row[1])
 			if conf_name != None:
-				self.combo.append_text(conf_name[0])
+				self.combo.append_text(conf_name)
 
 		self.combo_changed_id = self.combo.connect('changed', self.update)
 		self.combo.set_active(0)
@@ -58,8 +54,6 @@ class Conference_Combo:
 		if conf_text == "Whole League":
 			return None
 
-		self.db_cursor.execute("SELECT conf_id FROM confs WHERE conf_name = '" + str(conf_text) + "'")
-		row = self.db_cursor.fetchone()
-		if row != None:
-			return row[0]
-		return None
+		
+		(conf_id, conf_name) = self.JTN_db.get_conf(conf_name = conf_text)
+		return conf_id
