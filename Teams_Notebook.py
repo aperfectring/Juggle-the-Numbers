@@ -178,8 +178,7 @@ class Teams_Notebook:
 				return
 			conf_id = None
 			if has_season == True:
-				self.parent.cur.execute("SELECT conf_id FROM team_season WHERE (team_id = '" + str(myid) + "' AND season_id = '" + str(self.get_season_id()) + "')")
-				row = self.parent.cur.fetchone()
+				row = self.JTN_db.get_team_conf(myid, self.get_season_id())
 				conf_id = None
 				if row:
 					conf_id = row[0]
@@ -235,20 +234,17 @@ class Teams_Notebook:
 			conf_hbox.pack_start(conf_label)
 			conf_combo = gtk.combo_box_new_text()
 			conf_combo.append_text("None")
-			self.parent.cur.execute("SELECT conf_id FROM season_confs WHERE season_id = '" + str(self.get_season_id()) + "'")
-			for row in self.parent.cur.fetchall():
-				self.parent.cur.execute("SELECT conf_name FROM confs WHERE conf_id = '" + str(row[0]) + "'")
-				conf_name = self.parent.cur.fetchone()
+			for row in self.JTN_db.get_confs_by_season(self.get_season_id()):
+				conf_name = self.JTN_db.get_conf(conf_id = str(row[1]))
 				if conf_name:
-					conf_combo.append_text(conf_name[0])
+					conf_combo.append_text(conf_name[1])
 			model = conf_combo.get_model()
 			conf_combo.set_active(0)
 			if conf_id:
-				self.parent.cur.execute("SELECT conf_name FROM confs WHERE conf_id = '" + str(row[0]) + "'")
-				conf_name = self.parent.cur.fetchone()
+				conf_name = self.JTN_db.get_conf(conf_id = conf_id)
 				if conf_name:
 					for index in range(0, len(model)):
-						if model[index][0] == conf_name[0]:
+						if model[index][0] == conf_name[1]:
 							conf_combo.set_active(index)
 			conf_combo.show()
 			conf_hbox.pack_start(conf_combo)

@@ -267,7 +267,7 @@ class JTN_db:
 						"))")
 		elif (abbr != None):
 			self.cur.execute("SELECT * FROM teams WHERE (abbr='" + abbr + "')")
-		return self.cur.fetchall()
+		return self.cur.fetchone()
 
 	# id, name, city, abbr
 	def get_teams(self):
@@ -301,5 +301,8 @@ class JTN_db:
 		self.cur.execute("DELETE FROM teams WHERE (id = '" + str(team_id) + "')")
 		self.commit()
 
-			
+	def get_team_conf(self, team_id, season_id):
+		self.cur.execute("SELECT conf_id FROM team_season WHERE (team_id = '" + str(team_id) + "' AND season_id = '" + str(season_id) + "')")
+		return self.cur.fetchone()
+		
 
