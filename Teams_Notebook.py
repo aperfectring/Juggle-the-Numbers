@@ -3,12 +3,14 @@ import gtk
 import gobject
 
 class Teams_Notebook:
-	def __init__(self, parent):
+	def __init__(self, parent, parent_box, get_season_id):
 		self.parent = parent
+		self.parent_box = parent_box
+		self.get_season_id = get_season_id
 
 		self.list_hbox = gtk.HBox(spacing=10)
 		self.list_hbox.set_border_width(5)
-		self.parent.teams_note_vbox.pack_start(self.list_hbox)
+		self.parent_box.pack_start(self.list_hbox)
 
 
 		### Widgets for handling the "all teams" section of the window
@@ -93,7 +95,7 @@ class Teams_Notebook:
 
 		self.teamops_hbox = gtk.HBox(spacing=10)
 		self.teamops_hbox.set_border_width(5)
-		self.parent.teams_note_vbox.pack_end(self.teamops_hbox, expand=False)
+		self.parent_box.pack_end(self.teamops_hbox, expand=False)
 		
 		self.team_add_button = gtk.Button("Add team")
 		self.teamops_hbox.add(self.team_add_button)
@@ -102,7 +104,7 @@ class Teams_Notebook:
 
 	### Fill the team lists with all teams
 	def repop(self):
-		sid = self.parent.season_combo.get_id()
+		sid = self.get_season_id()
 		all_list = self.all_view.get_model()
 		all_list.clear()
 		league_list = self.league_view.get_model()
@@ -132,14 +134,14 @@ class Teams_Notebook:
 	### Move a team to the "league teams" list
 	def add_team(self, button):
 		(name, city, abbr, myid) = self.get_team(self.all_view)
-		self.parent.cur.execute("INSERT INTO team_season (team_id, season_id) VALUES ('" + str(myid) + "', '" + str(self.parent.season_combo.get_id()) + "')")
+		self.parent.cur.execute("INSERT INTO team_season (team_id, season_id) VALUES ('" + str(myid) + "', '" + str(self.get_season_id()) + "')")
 		self.parent.db.commit()
 		self.repop()
 
 	### Remove a team from the "league teams" list
 	def remove_team(self, button):
 		(name, city, abbr, myid) = self.get_team(self.league_view)
-		self.parent.cur.execute("DELETE FROM team_season WHERE (team_id='" + str(myid) + "' AND season_id='" + str(self.parent.season_combo.get_id()) + "')")
+		self.parent.cur.execute("DELETE FROM team_season WHERE (team_id='" + str(myid) + "' AND season_id='" + str(self.get_season_id()) + "')")
 		self.parent.db.commit()
 		self.repop()
 
@@ -178,7 +180,7 @@ class Teams_Notebook:
 				return
 			conf_id = None
 			if has_season == True:
-				self.parent.cur.execute("SELECT conf_id FROM team_season WHERE (team_id = '" + str(myid) + "' AND season_id = '" + str(self.parent.season_combo.get_id()) + "')")
+				self.parent.cur.execute("SELECT conf_id FROM team_season WHERE (team_id = '" + str(myid) + "' AND season_id = '" + str(self.get_season_id()) + "')")
 				row = self.parent.cur.fetchone()
 				conf_id = None
 				if row:
@@ -235,7 +237,7 @@ class Teams_Notebook:
 			conf_hbox.pack_start(conf_label)
 			conf_combo = gtk.combo_box_new_text()
 			conf_combo.append_text("None")
-			self.parent.cur.execute("SELECT conf_id FROM season_confs WHERE season_id = '" + str(self.parent.season_combo.get_id()) + "'")
+			self.parent.cur.execute("SELECT conf_id FROM season_confs WHERE season_id = '" + str(self.get_season_id()) + "'")
 			for row in self.parent.cur.fetchall():
 				self.parent.cur.execute("SELECT conf_name FROM confs WHERE conf_id = '" + str(row[0]) + "'")
 				conf_name = self.parent.cur.fetchone()
@@ -283,7 +285,7 @@ class Teams_Notebook:
 							else:
 								conf_text = "conf_id = NULL"
 						self.parent.cur.execute("UPDATE team_season SET " + conf_text +
-										" WHERE (team_id = '" + str(myid) + "' AND season_id = '" + str(self.parent.season_combo.get_id()) + "')")
+										" WHERE (team_id = '" + str(myid) + "' AND season_id = '" + str(self.get_season_id()) + "')")
 						
 				else:
 					self.parent.cur.execute("INSERT INTO teams (team_name, city, abbr) " + 

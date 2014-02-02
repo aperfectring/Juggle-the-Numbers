@@ -2295,7 +2295,7 @@ class Base:
 		self.teams_note_vbox.set_border_width(5)
 		self.notebook.append_page(self.teams_note_vbox, gtk.Label("Teams"))
 
-		self.teams_note = Teams_Notebook.Teams_Notebook(self)
+		self.teams_note = Teams_Notebook.Teams_Notebook(self, self.teams_note_vbox, self.season_combo.get_id)
 
 		# When the Conference Combo selection changes,
 		# the Teams Notebook needs to be repopulated
