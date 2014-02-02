@@ -289,11 +289,10 @@ class JTN_db:
 
 	def delete_games(self, game_id = None, team_id = None):
 		if game_id != None:
-			self.parent.cur.execute("DELETE FROM games WHERE (id = '" + str(game_id) + "')")
-			self.commit()
+			self.cur.execute("DELETE FROM games WHERE (id = '" + str(game_id) + "')")
 		elif team_id != None:
-			self.parent.cur.execute("DELETE FROM games WHERE (home_id='" + str(team_id) + "' OR away_id='" + str(team_id) + "')")
-			self.commit()
+			self.cur.execute("DELETE FROM games WHERE (home_id='" + str(team_id) + "' OR away_id='" + str(team_id) + "')")
+		self.commit()
 
 	def delete_team(self, team_id):
 		self.delete_games(team_id = team_id)
@@ -305,4 +304,29 @@ class JTN_db:
 		self.cur.execute("SELECT conf_id FROM team_season WHERE (team_id = '" + str(team_id) + "' AND season_id = '" + str(season_id) + "')")
 		return self.cur.fetchone()
 		
+	def set_team_conf(self, team_id, season_id, conf_id):
+		conf_text = None
+		if conf_id == None:
+			conf_text = "conf_id = NULL"
+		else:
+			conf_text = "conf_id = " + str(conf_id)
+		self.cur.execute("UPDATE team_season SET " + conf_text + 
+				" WHERE (team_id = '" + str(team_id) + "' " +
+					"AND season_id = '" + str(season_id) + "')")
+		self.commit()
+
+	def edit_team(self, old_name, new_name, city, abbr):
+		self.cur.execute("UPDATE teams " + 
+	                           "SET team_name = '" + new_name + "', " + 
+	                              "city = '" + city + "', " + 
+	                              "abbr = '" + abbr + "' " + 
+	                           "WHERE team_name = '" + old_name + "'")
+		self.commit()
+
+	def create_team(self, name, city, abbr):
+		self.cur.execute("INSERT INTO teams (team_name, city, abbr) " + 
+	                           "VALUES ('" + name + "', '" +
+	                              city + "', '" + 
+				      abbr + "')")
+		self.commit()
 

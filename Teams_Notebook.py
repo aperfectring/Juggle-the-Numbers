@@ -262,30 +262,23 @@ class Teams_Notebook:
 		if response == gtk.RESPONSE_ACCEPT:
 			if name_entry.get_text() != "":
 				if edit == True:
-					self.parent.cur.execute("UPDATE teams " + 
-					                           "SET team_name = '" + name_entry.get_text() + "', " + 
-					                              "city = '" + city_entry.get_text() + "', " + 
-					                              "abbr = '" + abbr_entry.get_text() + "' " + 
-					                           "WHERE team_name = '" + name + "'")
+					self.JTN_db.edit_team(old_name = name,
+							      new_name = name_entry.get_text(),
+							      city = city_entry.get_text(),
+							      abbr = abbr_entry.get_text())
 					if has_season == True:
+						conf_id = None
 						model = conf_combo.get_model()
-						if model[conf_combo.get_active()][0] == "None":
-							conf_text = "conf_id = NULL"
-						else:
-							self.parent.cur.execute("SELECT conf_id FROM confs WHERE conf_name = '" + model[conf_combo.get_active()][0] + "'")
-							row = self.parent.cur.fetchone()
+						if model[conf_combo.get_active()][0] != "None":
+							row = self.JTN_db.get_conf(conf_name = model[conf_combo.get_active()][0])
 							if row:
-								conf_text = "conf_id = '" + str(row[0]) + "'"
-							else:
-								conf_text = "conf_id = NULL"
-						self.parent.cur.execute("UPDATE team_season SET " + conf_text +
-										" WHERE (team_id = '" + str(myid) + "' AND season_id = '" + str(self.get_season_id()) + "')")
+								conf_id = row[0]
+						self.JTN_db.set_team_conf(myid, self.get_season_id(), conf_id)
 						
 				else:
-					self.parent.cur.execute("INSERT INTO teams (team_name, city, abbr) " + 
-					                           "VALUES ('" + name_entry.get_text() + "', '" +
-					                              city_entry.get_text() + "', '" + 
-								      abbr_entry.get_text() + "')")
+					self.JTN_db.create_team(name = name_entry.get_text(),
+								city = city_entry.get_text(),
+								abbr = abbr_entry.get_text())
 				self.parent.db.commit()
 
 				self.repop()
