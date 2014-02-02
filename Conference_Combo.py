@@ -15,7 +15,7 @@ class Conference_Combo:
 
 		self.combo = gtk.combo_box_new_text()
 		self.parent_box.pack_start(self.combo, expand=False)
-		self.combo.connect('changed', self.update)
+		self.combo_changed_id = self.combo.connect('changed', self.update)
 
 	### Register with the class for callbacks on updates
 	def register(self, callback):
@@ -23,6 +23,7 @@ class Conference_Combo:
 
 	### Update the combo box with the appropriate conferences for the current league/season
 	def repop(self):
+		self.combo.disconnect(self.combo_changed_id)
 		season_id = self.get_season_id()
 		model = self.combo.get_model()
 		for index in range(0, len(model)):
@@ -37,6 +38,7 @@ class Conference_Combo:
 			if conf_name != None:
 				self.combo.append_text(conf_name[0])
 
+		self.combo_changed_id = self.combo.connect('changed', self.update)
 		self.combo.set_active(0)
 
 	### Callback which triggers the recalculation of other widgets when the combo box is changed.
