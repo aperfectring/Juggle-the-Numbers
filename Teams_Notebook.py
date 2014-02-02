@@ -134,18 +134,18 @@ class Teams_Notebook:
 			name = all_list.get_value(itera, 0)
 			myid = None
 			city = ""
-			return get_team_from_name(self.parent.cur, name)
+			return self.JTN_db.get_team(name = name)
 		return (None, None, None, None)
 
 	### Move a team to the "league teams" list
 	def add_team(self, button):
-		(name, city, abbr, myid) = self.get_team(self.all_view)
+		(myid, name, city, abbr) = self.get_team(self.all_view)
 		self.JTN_db.add_team(self.get_season_id(), myid)
 		self.repop()
 
 	### Remove a team from the "league teams" list
 	def remove_team(self, button):
-		(name, city, abbr, myid) = self.get_team(self.league_view)
+		(myid, name, city, abbr) = self.get_team(self.league_view)
 		self.JTN_db.remove_team(self.get_season_id(), myid)
 		self.repop()
 
@@ -154,7 +154,7 @@ class Teams_Notebook:
 		if view == None:
 			return
 		all_list = view.get_model()
-		(name, city, abbr, myid) = self.get_team(view)
+		(myid, name, city, abbr) = self.get_team(view)
 
 		self.JTN_db.delete_team(myid)
 		self.repop()
@@ -173,7 +173,7 @@ class Teams_Notebook:
 		all_list = view.get_model()
 		# If we are editing a team, get the details of the current team
 		if edit == True:
-			(name, city, abbr, myid) = self.get_team(view)
+			(myid, name, city, abbr) = self.get_team(view)
 			if name == None:
 				return
 			conf_id = None

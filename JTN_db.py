@@ -256,6 +256,19 @@ class JTN_db:
 				"VALUES ('" + name + "')")
 		self.commit()
 
+	def get_team(self, team_id = None, name = None, abbr = None, season_id = None):
+		if team_id != None:
+			self.cur.execute("SELECT * FROM teams WHERE (id='" + str(team_id) + "')")
+		elif name != None:
+			self.cur.execute("SELECT * FROM teams WHERE (team_name='" + name + "')")
+		elif ((abbr != None) and (season_id != None)):
+			self.cur.execute("SELECT * FROM teams WHERE (abbr='" + abbr + "' AND id IN (" + 
+						"SELECT team_id FROM team_season WHERE (season_id = '" + str(season_id) + "')" +
+						"))")
+		elif (abbr != None):
+			self.cur.execute("SELECT * FROM teams WHERE (abbr='" + abbr + "')")
+		return self.cur.fetchall()
+
 	# id, name, city, abbr
 	def get_teams(self):
 		self.cur.execute("SELECT * FROM teams")
