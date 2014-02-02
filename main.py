@@ -20,6 +20,7 @@ import Season_Notebook
 import JTN_db
 import Conference_Combo
 import Conference_Notebook
+import Date_Calendar
 
 ### Gets team information tuple based on the team_id number
 def get_team_from_id(cur, myid):
@@ -88,26 +89,6 @@ def poisson_cdf(k, lamb):
 def poisson_pmf(k, lamb):
 	return math.pow(lamb, k) / math.factorial(k) * math.exp(-lamb)
 
-
-class Date_Calendar:
-	def __init__(self, parent):
-		self.parent = parent
-		self.label = gtk.Label("Date:")
-		self.parent.date_vbox.pack_start(self.label, expand=False)
-
-		self.calendar = gtk.Calendar()
-		self.parent.date_vbox.pack_start(self.calendar, expand=False)
-		self.calendar.select_month(datetime.date.today().month-1, datetime.date.today().year)
-		self.calendar.select_day(datetime.date.today().day)
-
-		self.calendar.connect('day-selected', self.repop)
-
-	def get_date(self):
-		(year, month, day) = self.calendar.get_date()
-		return datetime.date(year, month+1, day).isoformat()
-		
-	def repop(self, calendar):
-		self.parent.games_note.repop()
 
 class Teams_Notebook:
 	def __init__(self, parent):
@@ -2557,7 +2538,7 @@ class Base:
 
 		self.date_vbox = gtk.VBox(spacing=5)
 		self.combo_hbox.pack_start(self.date_vbox, expand=False)
-		self.date_cal = Date_Calendar(self)
+		self.date_cal = Date_Calendar.Date_Calendar(self)
 
 		self.notebook = gtk.Notebook()
 		self.window_vbox.add(self.notebook)
