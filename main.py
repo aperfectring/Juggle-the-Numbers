@@ -2827,7 +2827,7 @@ class Base:
 		self.season_note_vbox.set_border_width(5)
 		self.notebook.append_page(self.season_note_vbox, gtk.Label("Season"))
 
-		self.season_note = Season_Notebook.Season_Notebook(self.season_note_vbox, self.cur, self.db, self.season_combo.get_id)
+		self.season_note = Season_Notebook.Season_Notebook(self.season_note_vbox, self.JTN_db, self.season_combo.get_id)
 
 		# When the Season Combo selection changes,
 		# the Season Notebook needs to be repopulated

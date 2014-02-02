@@ -60,7 +60,7 @@ class Season_Combo:
 			season_start = seasons[0]
 			if(len(seasons) > 1):
 				season_end = seasons[1]
-		row = self.JTN_db.get_season(league_id, season_start, season_end)
+		row = self.JTN_db.get_season(league_id = league_id, start_year = season_start, end_year = season_end)
 			
 		if row != None:
 			return row[2]

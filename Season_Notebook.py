@@ -1,11 +1,13 @@
 
 import gtk
+import re
 
 class Season_Notebook:
-	def __init__(self, parent_box, db_cursor, db_handle, get_season_id):
+	def __init__(self, parent_box, JTN_db, get_season_id):
 		self.parent_box = parent_box
 		self.db_cursor = db_cursor
 		self.db_handle = db_handle
+		self.JTN_db = JTN_db
 		self.get_season_id = get_season_id
 		self.callback_list = []
 
@@ -45,17 +47,10 @@ class Season_Notebook:
 		season_id = self.get_season_id()
 		start_date = self.start_cal.get_date()
 		end_date = self.end_cal.get_date()
-		self.db_cursor.execute("UPDATE seasons SET " + 
-                                           "start = DATE('" + 
-                                              str(start_date[0]) + "-" + 
-                                              str(start_date[1]+1).zfill(2) + "-" + 
-                                              str(start_date[2]).zfill(2) + "'), " + 
-                                           "end = DATE('" + 
-                                              str(end_date[0]) + "-" + 
-                                              str(end_date[1]+1).zfill(2) + "-" + 
-                                              str(end_date[2]).zfill(2) + "') " + 
-                                           "WHERE id = '" + str(season_id) + "'")
-		self.db_handle.commit()
+		start_date_str = str(start_date[0]) + "-" + str(start_date[1]+1).zfill(2) + "-" + str(start_date[2]).zfill(2)
+		end_date_str =   str(end_date[0]) + "-" + str(end_date[1]+1).zfill(2) + "-" + str(end_date[2]).zfill(2) 
+
+		self.JTN_db.set_season(season_id, start_date_str, end_date_str)
 
 		if(start_date[0] == end_date[0]):
 			new_name = str(start_date[0])
@@ -84,17 +79,13 @@ class Season_Notebook:
 		season_id = self.get_season_id()
 
 		### Decode the starting year month and day from the season entry in the database		
-		self.db_cursor.execute("SELECT STRFTIME('%Y',start), STRFTIME('%m',start), STRFTIME('%d',start) " + 
-                                           "FROM seasons WHERE id = '" + str(season_id) + "'")
-		for row in self.db_cursor:
-			if row != None:
-				self.set_start(year = row[0], month = row[1], day = row[2])
+		row = self.JTN_db.get_season(season_id = season_id)
+		if(row[0] != None):
+			start_date = re.split('-', row[0])
+			self.set_start(year = start_date[0], month = start_date[1], day = start_date[2])
 
-		### Decode the ending year month and day from the season entry in the database		
-		self.db_cursor.execute("SELECT STRFTIME('%Y',end), STRFTIME('%m',end), STRFTIME('%d',end) " + 
-                                           "FROM seasons WHERE id = '" + str(season_id) + "'")
-		for row in self.db_cursor:
-			if row != None:
-				self.set_end(year = row[0], month = row[1], day = row[2])
+		if(row[1] != None):
+			end_date = re.split('-', row[1])
+			self.set_end(year = end_date[0], month = end_date[1], day = end_date[2])
 
 
