@@ -2595,11 +2595,15 @@ class Base:
 		self.confs_note_vbox.set_border_width(5)
 		self.notebook.append_page(self.confs_note_vbox, gtk.Label("Confs"))
 
-		self.conf_note = Conference_Notebook.Conference_Notebook(self)
+		self.conf_note = Conference_Notebook.Conference_Notebook(self.confs_note_vbox, self.cur, self.db, self.JTN_db, self.season_combo.get_id)
 
 		# When the Season Combo selection changes,
 		# the Conference Notebook needs to be repopulated
 		self.season_combo.register(self.conf_note.repop)
+
+		# When the Conference Notebook updates (repop),
+		# the Conference Combo needs to be repopulated
+		self.conf_note.register(self.conf_combo.repop)
 
 		self.teams_note_vbox = gtk.VBox(spacing=10)
 		self.teams_note_vbox.set_border_width(5)

@@ -3,12 +3,17 @@ import gtk
 import gobject
 
 class Conference_Notebook:
-	def __init__(self, parent):
-		self.parent = parent
+	def __init__(self, parent_box, db_cursor, db_handle, JTN_db, get_season_id):
+		self.parent_box = parent_box
+		self.db_cursor = db_cursor
+		self.db_handle = db_handle
+		self.JTN_db = JTN_db
+		self.get_season_id = get_season_id
+		self.callback_list = []
 
 		self.list_hbox = gtk.HBox(spacing=10)
 		self.list_hbox.set_border_width(5)
-		self.parent.confs_note_vbox.pack_start(self.list_hbox)
+		self.parent_box.pack_start(self.list_hbox)
 
 		### Widgets for handling the "all confs" section of the window
 		all_list_vbox = gtk.VBox(spacing=10)
@@ -89,51 +94,57 @@ class Conference_Notebook:
 
 		self.confops_hbox = gtk.HBox(spacing=10)
 		self.confops_hbox.set_border_width(5)
-		self.parent.confs_note_vbox.pack_end(self.confops_hbox, expand=False)
+		self.parent_box.pack_end(self.confops_hbox, expand=False)
 		
 		self.conf_add_button = gtk.Button("Add conf")
 		self.confops_hbox.add(self.conf_add_button)
 		self.conf_add_button.connect('clicked', self.edit_conf, self.all_view)
 
+	### Register with the class for callbacks on updates
+	def register(self, callback):
+		self.callback_list.append(callback)
+
 
 	def repop(self):
-		sid = self.parent.season_combo.get_id()
+		sid = self.get_season_id()
 		all_list = self.all_view.get_model()
 		all_list.clear()
 		league_list = self.league_view.get_model()
 		league_list.clear()
 
-		self.parent.cur.execute("SELECT conf_name, conf_id FROM confs")
-		for row in self.parent.cur.fetchall():
+		self.db_cursor.execute("SELECT conf_name, conf_id FROM confs")
+		for row in self.db_cursor.fetchall():
 			if row:
-				self.parent.cur.execute("SELECT * FROM season_confs WHERE (conf_id = '" + str(row[1]) + "' AND season_id = '" + str(sid) + "')")
-				if len(self.parent.cur.fetchall()) >= 1:
+				self.db_cursor.execute("SELECT * FROM season_confs WHERE (conf_id = '" + str(row[1]) + "' AND season_id = '" + str(sid) + "')")
+				if len(self.db_cursor.fetchall()) >= 1:
 					league_list.append([row[0]])
 				else:
 					all_list.append([row[0]])
-		self.parent.conf_combo.repop()
+
+		for callback in self.callback_list:
+			callback()
 
 	def get_conf(self, view):
 		all_list = view.get_model()
 		if view.get_cursor()[0]:
 			itera = all_list.iter_nth_child(None, view.get_cursor()[0][0])
 			name = all_list.get_value(itera, 0)
-			self.parent.cur.execute("SELECT conf_id FROM confs WHERE conf_name = '" + name + "'")
-			row = self.parent.cur.fetchone()
+			self.db_cursor.execute("SELECT conf_id FROM confs WHERE conf_name = '" + name + "'")
+			row = self.db_cursor.fetchone()
 			if row:
 				return (name, int(row[0]))
 		return (None, None)
 
 	def add_conf(self, button):
 		(name, myid) = self.get_conf(self.all_view)
-		self.parent.cur.execute("INSERT INTO season_confs (conf_id, season_id) VALUES ('" + str(myid) + "', '" + str(self.parent.season_combo.get_id()) + "')")
-		self.parent.db.commit()
+		self.db_cursor.execute("INSERT INTO season_confs (conf_id, season_id) VALUES ('" + str(myid) + "', '" + str(self.get_season_id()) + "')")
+		self.JTN_db.commit()
 		self.repop()
 
 	def remove_conf(self, button):
 		(name, myid) = self.get_conf(self.league_view)
-		self.parent.cur.execute("DELETE FROM season_confs WHERE (conf_id = '" + str(myid) + "' AND season_id = '" + str(self.parent.season_combo.get_id()) + "')")
-		self.parent.db.commit()
+		self.db_cursor.execute("DELETE FROM season_confs WHERE (conf_id = '" + str(myid) + "' AND season_id = '" + str(self.get_season_id()) + "')")
+		self.JTN_db.commit()
 		self.repop()
 
 	def delete_conf(self, button, view):
@@ -142,11 +153,11 @@ class Conference_Notebook:
 		all_list = view.get_model()
 		(name, myid) = self.get_conf(view)
 
-		self.parent.cur.execute("UPDATE team_season SET conf_id = NULL WHERE conf_id = '" + str(myid) + "'")
+		self.db_cursor.execute("UPDATE team_season SET conf_id = NULL WHERE conf_id = '" + str(myid) + "'")
 
-		self.parent.cur.execute("DELETE FROM season_confs WHERE (conf_id = '" + str(myid) + "')")
-		self.parent.cur.execute("DELETE FROM confs WHERE (conf_id = '" + str(myid) + "')")
-		self.parent.db.commit()
+		self.db_cursor.execute("DELETE FROM season_confs WHERE (conf_id = '" + str(myid) + "')")
+		self.db_cursor.execute("DELETE FROM confs WHERE (conf_id = '" + str(myid) + "')")
+		self.JTN_db.commit()
 		self.repop()
 
 	def edit_conf(self, button, view):
@@ -165,7 +176,7 @@ class Conference_Notebook:
 			(name, myid) = self.get_conf(view)
 
 		dialog = gtk.Dialog("Edit Conf",
-					self.parent.window,
+					None,
 					gtk.DIALOG_MODAL | gtk.DIALOG_DESTROY_WITH_PARENT, (gtk.STOCK_CANCEL, gtk.RESPONSE_REJECT, gtk.STOCK_OK, gtk.RESPONSE_ACCEPT))
 
 		name_hbox = gtk.HBox(spacing=10)
@@ -186,13 +197,13 @@ class Conference_Notebook:
 		if response == gtk.RESPONSE_ACCEPT:
 			if name_entry.get_text() != "":
 				if edit == True:
-					self.parent.cur.execute("UPDATE confs " +
+					self.db_cursor.execute("UPDATE confs " +
 									"SET conf_name = '" + name_entry.get_text() + "'" +
 									"WHERE conf_name = '" + name + "'")
 				else:
-					self.parent.cur.execute("INSERT INTO confs (conf_name) " +
+					self.db_cursor.execute("INSERT INTO confs (conf_name) " +
 									"VALUES ('" + name_entry.get_text() + "')")
-				self.parent.db.commit()
+				self.JTN_db.commit()
 
 				self.repop()
 
