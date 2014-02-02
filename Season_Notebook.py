@@ -5,8 +5,6 @@ import re
 class Season_Notebook:
 	def __init__(self, parent_box, JTN_db, get_season_id):
 		self.parent_box = parent_box
-		self.db_cursor = db_cursor
-		self.db_handle = db_handle
 		self.JTN_db = JTN_db
 		self.get_season_id = get_season_id
 		self.callback_list = []
