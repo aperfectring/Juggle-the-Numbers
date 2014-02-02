@@ -112,15 +112,18 @@ class Conference_Notebook:
 		league_list = self.league_view.get_model()
 		league_list.clear()
 
-		self.db_cursor.execute("SELECT conf_name, conf_id FROM confs")
-		for row in self.db_cursor.fetchall():
-			if row:
-				self.db_cursor.execute("SELECT * FROM season_confs WHERE (conf_id = '" + str(row[1]) + "' AND season_id = '" + str(sid) + "')")
-				if len(self.db_cursor.fetchall()) >= 1:
-					league_list.append([row[0]])
-				else:
-					all_list.append([row[0]])
+		cur_confs = self.JTN_db.get_confs_by_season(sid)
 
+		for row in self.JTN_db.get_confs():
+			found = 0
+			for conf in cur_confs:
+				if row[0] == conf[1]:
+					league_list.append([row[1]])
+					found = 1
+					break
+			if found == 0:
+				all_list.append([row[1]])
+				
 		for callback in self.callback_list:
 			callback()
 
@@ -129,20 +132,17 @@ class Conference_Notebook:
 		if view.get_cursor()[0]:
 			itera = all_list.iter_nth_child(None, view.get_cursor()[0][0])
 			name = all_list.get_value(itera, 0)
-			self.db_cursor.execute("SELECT conf_id FROM confs WHERE conf_name = '" + name + "'")
-			row = self.db_cursor.fetchone()
-			if row:
-				return (name, int(row[0]))
+			return self.JTN_db.get_conf(conf_name = name)
 		return (None, None)
 
 	def add_conf(self, button):
-		(name, myid) = self.get_conf(self.all_view)
+		(myid, name) = self.get_conf(self.all_view)
 		self.db_cursor.execute("INSERT INTO season_confs (conf_id, season_id) VALUES ('" + str(myid) + "', '" + str(self.get_season_id()) + "')")
 		self.JTN_db.commit()
 		self.repop()
 
 	def remove_conf(self, button):
-		(name, myid) = self.get_conf(self.league_view)
+		(myid, name) = self.get_conf(self.league_view)
 		self.db_cursor.execute("DELETE FROM season_confs WHERE (conf_id = '" + str(myid) + "' AND season_id = '" + str(self.get_season_id()) + "')")
 		self.JTN_db.commit()
 		self.repop()
@@ -151,7 +151,7 @@ class Conference_Notebook:
 		if view == None:
 			return
 		all_list = view.get_model()
-		(name, myid) = self.get_conf(view)
+		(myid, name) = self.get_conf(view)
 
 		self.db_cursor.execute("UPDATE team_season SET conf_id = NULL WHERE conf_id = '" + str(myid) + "'")
 
@@ -173,7 +173,7 @@ class Conference_Notebook:
 		all_list = view.get_model()
 		# If we are editing a conf, get the id of the current conf
 		if edit == True:
-			(name, myid) = self.get_conf(view)
+			(myid, name) = self.get_conf(view)
 
 		dialog = gtk.Dialog("Edit Conf",
 					None,

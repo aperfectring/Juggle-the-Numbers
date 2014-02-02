@@ -210,8 +210,10 @@ class JTN_db:
 					"WHERE id = '" + str(season_id) + "'")
 		self.commit()
 
-	def get_confs(self, season_id):
-		self.cur.execute("SELECT * FROM season_confs WHERE season_id = '" + str(season_id) + "'")
+	def get_confs_by_season(self, season_id):
+		if season_id != None:
+			self.cur.execute("SELECT * FROM season_confs WHERE season_id = '" + str(season_id) + "'")
+
 		return self.cur.fetchall()
 
 	def get_conf(self, conf_id = None, conf_name = None):
@@ -224,4 +226,8 @@ class JTN_db:
 			return self.cur.fetchone()
 
 		return None
+
+	def get_confs(self):
+		self.cur.execute("SELECT * FROM confs")
+		return self.cur.fetchall()
 

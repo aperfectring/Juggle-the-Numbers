@@ -29,7 +29,7 @@ class Conference_Combo:
 
 		self.combo.append_text("Whole League")
 
-		for row in self.JTN_db.get_confs(season_id):
+		for row in self.JTN_db.get_confs_by_season(season_id = season_id):
 			(conf_id, conf_name) = self.JTN_db.get_conf(conf_id = row[1])
 			if conf_name != None:
 				self.combo.append_text(conf_name)
