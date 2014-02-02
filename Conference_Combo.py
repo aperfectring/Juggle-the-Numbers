@@ -2,28 +2,38 @@
 import gtk
 
 class Conference_Combo:
-	def __init__(self, parent):
-		self.parent = parent
+	def __init__(self, parent_box, db_cursor, db_handle, JTN_db, get_season_id):
+		self.parent_box = parent_box
+		self.db_cursor = db_cursor
+		self.db_handle = db_handle
+		self.JTN_db = JTN_db
+		self.callback_list = []
+		self.get_season_id = get_season_id
+
 		self.label = gtk.Label("Conference:")
-		self.parent.conference_vbox.pack_start(self.label, expand=False)
+		self.parent_box.pack_start(self.label, expand=False)
 
 		self.combo = gtk.combo_box_new_text()
-		self.parent.conference_vbox.pack_start(self.combo, expand=False)
+		self.parent_box.pack_start(self.combo, expand=False)
 		self.combo.connect('changed', self.update)
+
+	### Register with the class for callbacks on updates
+	def register(self, callback):
+		self.callback_list.append(callback)
 
 	### Update the combo box with the appropriate conferences for the current league/season
 	def repop(self):
-		season_id = self.parent.season_combo.get_id()
+		season_id = self.get_season_id()
 		model = self.combo.get_model()
 		for index in range(0, len(model)):
 			self.combo.remove_text(0)
 
 		self.combo.append_text("Whole League")
 
-		self.parent.cur.execute("SELECT conf_id FROM season_confs WHERE season_id = '" + str(season_id) + "'")
-		for row in self.parent.cur.fetchall():
-			self.parent.cur.execute("SELECT conf_name FROM confs WHERE conf_id = '" + str(row[0]) + "'")
-			conf_name = self.parent.cur.fetchone()
+		self.db_cursor.execute("SELECT conf_id FROM season_confs WHERE season_id = '" + str(season_id) + "'")
+		for row in self.db_cursor.fetchall():
+			self.db_cursor.execute("SELECT conf_name FROM confs WHERE conf_id = '" + str(row[0]) + "'")
+			conf_name = self.db_cursor.fetchone()
 			if conf_name != None:
 				self.combo.append_text(conf_name[0])
 
@@ -31,9 +41,9 @@ class Conference_Combo:
 
 	### Callback which triggers the recalculation of other widgets when the combo box is changed.
 	def update(self, button):
+		for callback in self.callback_list:
+			callback()
 
-		self.parent.teams_note.repop()
-		self.parent.games_note.repop()
 
 	### Fetch the unique ID of the currently selected conference
 	def get_id(self):
@@ -46,8 +56,8 @@ class Conference_Combo:
 		if conf_text == "Whole League":
 			return None
 
-		self.parent.cur.execute("SELECT conf_id FROM confs WHERE conf_name = '" + str(conf_text) + "'")
-		row = self.parent.cur.fetchone()
+		self.db_cursor.execute("SELECT conf_id FROM confs WHERE conf_name = '" + str(conf_text) + "'")
+		row = self.db_cursor.fetchone()
 		if row != None:
 			return row[0]
 		return None

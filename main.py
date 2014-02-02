@@ -2748,7 +2748,7 @@ class Base:
 		self.conference_vbox = gtk.VBox(spacing=5)
 		self.combo_vbox.add(self.conference_vbox)
 
-		self.conf_combo = Conference_Combo.Conference_Combo(self)
+		self.conf_combo = Conference_Combo.Conference_Combo(self.conference_vbox, self.cur, self.db, self.JTN_db, self.season_combo.get_id)
 
 		self.date_vbox = gtk.VBox(spacing=5)
 		self.combo_hbox.pack_start(self.date_vbox, expand=False)
@@ -2802,6 +2802,10 @@ class Base:
 
 		self.teams_note = Teams_Notebook(self)
 
+		# When the Conference Combo selection changes,
+		# the Teams Notebook needs to be repopulated
+		self.conf_combo.register(self.teams_note.repop)
+
 		self.games_note_vbox = gtk.VBox(spacing=10)
 		self.games_note_vbox.set_border_width(5)
 		self.notebook.append_page(self.games_note_vbox, gtk.Label("Games"))
@@ -2819,6 +2823,10 @@ class Base:
 		self.model_note = Model_Notebook(self)
 
 		self.games_note = Games_Notebook(self)
+
+		# When the Conference Combo selection changes,
+		# the Games Notebook needs to be repopulated
+		self.conf_combo.register(self.games_note.repop)
 
 		self.results_note_vbox = gtk.VBox(spacing=10)
 		self.results_note_vbox.set_border_width(5)
