@@ -2,10 +2,13 @@
 import gtk
 import gobject
 
+# id, name, city, abbr
+
 class Teams_Notebook:
-	def __init__(self, parent, parent_box, get_season_id):
+	def __init__(self, parent, parent_box, JTN_db, get_season_id):
 		self.parent = parent
 		self.parent_box = parent_box
+		self.JTN_db = JTN_db
 		self.get_season_id = get_season_id
 
 		self.list_hbox = gtk.HBox(spacing=10)
@@ -109,16 +112,19 @@ class Teams_Notebook:
 		all_list.clear()
 		league_list = self.league_view.get_model()
 		league_list.clear()
-		self.parent.cur.execute("SELECT team_name,id FROM teams")
-		for row in self.parent.cur.fetchall():
-			if row:
-				self.parent.cur.execute("SELECT * FROM team_season WHERE (team_id = '" + str(row[1]) + "' AND season_id='" + str(sid) + "')")
-				#  WHERE (team_id = '" + str(row[1]) + "')"
-				# "' AND season_id='" + str(sid) + 
-				if len(self.parent.cur.fetchall()) >= 1:
-					league_list.append([row[0]])
-				else:
-					all_list.append([row[0]])
+
+		cur_teams = self.JTN_db.get_teams_by_season(sid)
+
+		for row in self.JTN_db.get_teams():
+			found = 0
+			for team in cur_teams:
+				if row[0] == team[0]:
+					league_list.append([row[1]])
+					found = 1
+					break
+			if found == 0:
+				all_list.append([row[1]])
+					
 
 	### Get the team tuple from the provided view
 	def get_team(self, view):
@@ -134,15 +140,13 @@ class Teams_Notebook:
 	### Move a team to the "league teams" list
 	def add_team(self, button):
 		(name, city, abbr, myid) = self.get_team(self.all_view)
-		self.parent.cur.execute("INSERT INTO team_season (team_id, season_id) VALUES ('" + str(myid) + "', '" + str(self.get_season_id()) + "')")
-		self.parent.db.commit()
+		self.JTN_db.add_team(self.get_season_id(), myid)
 		self.repop()
 
 	### Remove a team from the "league teams" list
 	def remove_team(self, button):
 		(name, city, abbr, myid) = self.get_team(self.league_view)
-		self.parent.cur.execute("DELETE FROM team_season WHERE (team_id='" + str(myid) + "' AND season_id='" + str(self.get_season_id()) + "')")
-		self.parent.db.commit()
+		self.JTN_db.remove_team(self.get_season_id(), myid)
 		self.repop()
 
 	### Delete all references to the selected team from the DB
@@ -152,13 +156,7 @@ class Teams_Notebook:
 		all_list = view.get_model()
 		(name, city, abbr, myid) = self.get_team(view)
 
-		self.parent.cur.execute("SELECT id FROM games WHERE (home_id='" + str(myid) + "' OR away_id='" + str(myid) + "')")
-		for row in self.parent.cur.fetchall():
-			self.parent.games_note.delete_game_by_id(row[0])
-
-		self.parent.cur.execute("DELETE FROM team_season WHERE (team_id='" + str(myid) + "')")
-		self.parent.cur.execute("DELETE FROM teams WHERE (id='" + str(myid) + "')")
-		self.parent.db.commit()
+		self.JTN_db.delete_team(myid)
 		self.repop()
 
 	### Create/edit the details of a team

@@ -255,3 +255,38 @@ class JTN_db:
 		self.cur.execute("INSERT INTO confs (conf_name) " +
 				"VALUES ('" + name + "')")
 		self.commit()
+
+	# id, name, city, abbr
+	def get_teams(self):
+		self.cur.execute("SELECT * FROM teams")
+		return self.cur.fetchall()
+
+	# team, season, conf
+	def get_teams_by_season(self, season_id):
+		self.cur.execute("SELECT * FROM team_season WHERE (season_id='" + str(season_id) + "')")
+		return self.cur.fetchall()
+
+	def add_team(self, season_id, team_id):
+		self.cur.execute("INSERT INTO team_season (team_id, season_id) VALUES ('" + str(team_id) + "', '" + str(season_id) + "')")
+		self.commit()
+
+	def remove_team(self, season_id, team_id):
+		self.cur.execute("DELETE FROM team_season WHERE (team_id = '" + str(team_id) + "' AND season_id = '" + str(season_id) + "')")
+		self.commit()
+
+	def delete_games(self, game_id = None, team_id = None):
+		if game_id != None:
+			self.parent.cur.execute("DELETE FROM games WHERE (id = '" + str(game_id) + "')")
+			self.commit()
+		elif team_id != None:
+			self.parent.cur.execute("DELETE FROM games WHERE (home_id='" + str(team_id) + "' OR away_id='" + str(team_id) + "')")
+			self.commit()
+
+	def delete_team(self, team_id):
+		self.delete_games(team_id = team_id)
+		self.cur.execute("DELETE FROM team_season WHERE (team_id = '" + str(team_id) + "')")
+		self.cur.execute("DELETE FROM teams WHERE (id = '" + str(team_id) + "')")
+		self.commit()
+
+			
+
