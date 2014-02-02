@@ -2538,7 +2538,7 @@ class Base:
 
 		self.date_vbox = gtk.VBox(spacing=5)
 		self.combo_hbox.pack_start(self.date_vbox, expand=False)
-		self.date_cal = Date_Calendar.Date_Calendar(self)
+		self.date_cal = Date_Calendar.Date_Calendar(self.date_vbox)
 
 		self.notebook = gtk.Notebook()
 		self.window_vbox.add(self.notebook)
@@ -2617,6 +2617,10 @@ class Base:
 		# When the Conference Combo selection changes,
 		# the Games Notebook needs to be repopulated
 		self.conf_combo.register(self.games_note.repop)
+
+		# When the Date Calendar selection changes,
+		# the Games Notebook needs to be repopulated
+		self.date_cal.register(self.games_note.repop)
 
 		self.results_note_vbox = gtk.VBox(spacing=10)
 		self.results_note_vbox.set_border_width(5)
