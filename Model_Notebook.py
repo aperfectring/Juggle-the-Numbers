@@ -177,13 +177,6 @@ class Model_Notebook:
 		conf_id = self.parent.conf_combo.get_id()
 		all_list = self.all_view.get_model()
 		all_list.clear()
-		gtk.gdk.threads_leave()
-
-		if conf_id == None:
-			self.parent.cur.execute("SELECT team_id FROM team_season WHERE (season_id = '" + str(season_id) + "')")
-		else:
-			self.parent.cur.execute("SELECT team_id FROM team_season WHERE (season_id = '" + str(season_id) + "' AND conf_id = '" + str(conf_id) + "')")
-		gtk.gdk.threads_enter()
 
 		if season_id:
 			team_list = []
@@ -205,12 +198,9 @@ class Model_Notebook:
 		team_goals_adj = opp_goals_base - min(team_goals_base, opp_goals_base)
 		opp_goals_adj = team_goals_base - min(team_goals_base, opp_goals_base)
 
-		win_chance = 0.0
-		for i in range(0,opp_goals_adj):
-			win_chance += poisson_pmf(i, opp_exp_gf)
+		win_chance = sum(map(lambda x: poisson_pmf(x, opp_exp_gf), range(0,opp_goals_adj)))
 
-		for i in range(0,100):
-			win_chance += poisson_pmf(i + opp_goals_adj, opp_exp_gf) * (1 - poisson_cdf(i + team_goals_adj, team_exp_gf))
+		win_chance += sum(map(lambda x: poisson_pmf(x + opp_goals_adj, opp_exp_gf) * (1 - poisson_cdf(x + team_goals_adj, team_exp_gf)), range(0,100)))
 
 		return win_chance
 
@@ -223,8 +213,7 @@ class Model_Notebook:
 		opp_goals_adj = team_goals_base - min(team_goals_base, opp_goals_base)
 
 		tie_chance = 0.0
-		for i in range(0,100):
-			tie_chance += poisson_pmf(i + team_goals_adj, team_exp_gf) * poisson_pmf(i + opp_goals_adj, opp_exp_gf)
+		tie_chance = sum(map(lambda x: poisson_pmf(x + team_goals_adj, team_exp_gf) * poisson_pmf(x + opp_goals_adj, opp_exp_gf), range(0,100)))
 
 		return tie_chance
 
