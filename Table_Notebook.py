@@ -152,15 +152,13 @@ class Table_Notebook:
 			date_today = datetime.date.today()
 			date = date_today.isoformat()
 		season_id = self.get_season_id()
-		goals_scored = 0
-		self.parent.cur.execute("SELECT SUM(home_goals) FROM games WHERE (season_id = '" + str(season_id) + "' AND played = 'TRUE' AND date <= '" + date + "' AND home_id = '" + str(team) + "')")
-		goal_row = self.parent.cur.fetchone()
-		if goal_row[0]:
-			goals_scored = goal_row[0]
-		self.parent.cur.execute("SELECT SUM(away_goals) FROM games WHERE (season_id = '" + str(season_id) + "' AND played = 'TRUE' AND date <= '" + date + "' AND away_id = '" + str(team) + "')")
-		goal_row = self.parent.cur.fetchone()
-		if goal_row[0]:
-			goals_scored += goal_row[0]
+
+		home_games = self.JTN_db.get_all_games(season_id = season_id, played = "TRUE", end_date = date, home_team = team)
+		goals_scored = sum(map(lambda x: x[3], home_games))
+
+		away_games = self.JTN_db.get_all_games(season_id = season_id, played = "TRUE", end_date = date, away_team = team)
+		goals_scored += sum(map(lambda x: x[6], away_games))
+
 		return goals_scored
 
 	### Fetch the goals against the team up to and including the specified date
@@ -169,15 +167,13 @@ class Table_Notebook:
 			date_today = datetime.date.today()
 			date = date_today.isoformat()
 		season_id = self.get_season_id()
-		goals_against = 0
-		self.parent.cur.execute("SELECT SUM(away_goals) FROM games WHERE (season_id = '" + str(season_id) + "' AND played = 'TRUE' AND date <= '" + date + "' AND home_id = '" + str(team) + "')")
-		goal_row = self.parent.cur.fetchone()
-		if goal_row[0]:
-			goals_against = goal_row[0]
-		self.parent.cur.execute("SELECT SUM(home_goals) FROM games WHERE (season_id = '" + str(season_id) + "' AND played = 'TRUE' AND date <= '" + date + "' AND away_id = '" + str(team) + "')")
-		goal_row = self.parent.cur.fetchone()
-		if goal_row[0]:
-			goals_against += goal_row[0]
+
+		home_games = self.JTN_db.get_all_games(season_id = season_id, played = "TRUE", end_date = date, home_team = team)
+		goals_against = sum(map(lambda x: x[6], home_games))
+
+		away_games = self.JTN_db.get_all_games(season_id = season_id, played = "TRUE", end_date = date, away_team = team)
+		goals_against += sum(map(lambda x: x[3], away_games))
+
 		return goals_against
 
 	### Fetch the goals scored by home teams up to and including the specified date
@@ -186,12 +182,8 @@ class Table_Notebook:
 			date_today = datetime.date.today()
 			date = date_today.isoformat()
 		season_id = self.get_season_id()
-		self.parent.cur.execute("SELECT SUM(home_goals) FROM games WHERE (season_id = '" + str(season_id) + "' AND played = 'TRUE' AND date <= '" + date + "')")
-		goal_row = self.parent.cur.fetchone()
-		goals = 0
-		if goal_row[0]:
-			goals = goal_row[0]
-		return goals
+		home_games = self.JTN_db.get_all_games(season_id = season_id, played = "TRUE", end_date = date)
+		return sum(map(lambda x: x[3], home_games))
 
 	### Fetch the goals scored by away teams up to and including the specified date
 	def fetch_away_goals(self, date = None):
@@ -199,9 +191,6 @@ class Table_Notebook:
 			date_today = datetime.date.today()
 			date = date_today.isoformat()
 		season_id = self.get_season_id()
-		self.parent.cur.execute("SELECT SUM(away_goals) FROM games WHERE (season_id = '" + str(season_id) + "' AND played = 'TRUE' AND date <= '" + date + "')")
-		goal_row = self.parent.cur.fetchone()
-		goals = 0
-		if goal_row[0]:
-			goals = goal_row[0]
-		return goals
+
+		away_games = self.JTN_db.get_all_games(season_id = season_id, played = "TRUE", end_date = date)
+		return sum(map(lambda x: x[6], away_games))
