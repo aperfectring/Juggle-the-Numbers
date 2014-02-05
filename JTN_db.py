@@ -271,10 +271,14 @@ class JTN_db:
 		return self.cur.fetchone()
 
 	# id, name, city, abbr
-	def get_teams(self, season_id = None):
+	def get_teams(self, season_id = None, conf_id = None):
 		if season_id != None:
+			conf_id_text = ""
+			if conf_id != None:
+				conf_id_text = " AND conf_id = '" + str(conf_id) + "'"
 			self.cur.execute("SELECT * FROM teams WHERE (id IN (" + 
-						"SELECT team_id FROM team_season WHERE (season_id = '" + str(season_id) + "')" +
+						"SELECT team_id FROM team_season WHERE (season_id = '" + str(season_id) + "'" +
+							conf_id_text + ")" +
 						"))")
 		else:
 			self.cur.execute("SELECT * FROM teams")
