@@ -1256,13 +1256,13 @@ class Base:
 
 		# When the Teams Notebook updates,
 		# the Table Notebook needs to be repopulated.
-		self.teams_note.register(self.table_note.repop())
+		self.teams_note.register(self.table_note.repop)
 
 		self.model_note = Model_Notebook.Model_Notebook(self, self.model_note_vbox, self.season_combo.get_id, self.conf_combo.get_id, self.JTN_db)
 
 		# When the Teams Notebook updates,
 		# the Model Notebook needs to be repopulated.
-		self.teams_note.register(self.model_note.repop())
+		self.teams_note.register(self.model_note.clear)
 
 		self.games_note = Games_Notebook.Games_Notebook(self.games_note_vbox, self.JTN_db, self.season_combo.get_id)
 

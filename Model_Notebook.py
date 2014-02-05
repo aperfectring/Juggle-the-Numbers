@@ -83,13 +83,7 @@ class Model_Notebook:
 
 		season_id = self.get_season_id()
 		conf_id = self.get_conf_id()
-		if conf_id == None:
-			self.parent.cur.execute("SELECT team_id FROM team_season WHERE (season_id = '" + str(season_id) + "')")
-		else:
-			self.parent.cur.execute("SELECT team_id FROM team_season WHERE (season_id = '" + str(season_id) + "' AND conf_id = '" + str(conf_id) + "')")
-
-
-		for team in self.parent.cur.fetchall():
+		for team in self.JTN_db.get_teams(season_id = season_id, conf_id = conf_id):
 			(myid, name, city, abbr) = self.JTN_db.get_team(team_id = team[0])
 			pts = self.parent.table_note.fetch_pts(myid)
 			gp = self.parent.table_note.fetch_gp(myid)
@@ -265,8 +259,7 @@ class Model_Notebook:
 
 		### Fetch all of the basic stats for each team
 		gtk.gdk.threads_enter()
-		self.parent.cur.execute("SELECT team_id FROM team_season WHERE season_id = '" + str(season_id) + "'")
-		for team in self.parent.cur.fetchall():
+		for team in self.JTN_db.get_teams(season_id = season_id):
 			team_points[team[0]] = self.parent.table_note.fetch_pts(int(team[0]), date)
 			team_gf[team[0]] = float(self.parent.table_note.fetch_gf(int(team[0]), date))
 			team_ga[team[0]] = float(self.parent.table_note.fetch_ga(int(team[0]), date))
@@ -276,12 +269,11 @@ class Model_Notebook:
 		### Iterate through all of the unplayed games + games after the specified date, and
 		###   calculate the chance of win-tie-loss for each team.  Calculate the expected points
 		###   for each team, and add those values into the points already earned.
-		self.parent.cur.execute("SELECT home_id, away_id, date FROM games WHERE (season_id = '" + str(season_id) + "' AND (date > '" + date + "' OR played = 'FALSE'))")
-
-		game_arr = self.parent.cur.fetchall()
+		game_arr = self.JTN_db.get_all_games(season_id = season_id, unplayed_after = date)
 		for game in game_arr:
-			home = game[0]
-			away = game[1]
+
+			home = game[2]
+			away = game[5]
 			gtk.gdk.threads_enter()
 			if self.thread_sig.wait(0.01):
 				gtk.gdk.threads_leave()
@@ -315,8 +307,7 @@ class Model_Notebook:
 			date = date_today.isoformat()
 
 		team_ppg = {}
-		self.parent.cur.execute("SELECT team_id FROM team_season WHERE season_id = '" + str(season_id) + "'")
-		for team in self.parent.cur.fetchall():
+		for team in self.JTN_db.get_teams(season_id = season_id):
 			gtk.gdk.threads_enter()
 			team_gp = float(self.parent.table_note.fetch_gp(int(team[0]), date))
 			team_gf = float(self.parent.table_note.fetch_gf(int(team[0]), date))
