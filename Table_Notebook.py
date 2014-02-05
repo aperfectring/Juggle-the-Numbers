@@ -110,9 +110,7 @@ class Table_Notebook:
 			date_today = datetime.date.today()
 			date = date_today.isoformat()
 		season_id = self.get_season_id()
-		self.parent.cur.execute("SELECT COUNT(*) FROM games WHERE (season_id = '" + str(season_id) + "' AND played = 'TRUE' AND date <= '" + date + "' AND (home_id = '" + str(team) + "' OR away_id = '" + str(team) + "'))")
-		games_played = self.parent.cur.fetchone()[0]
-		return games_played
+		return len(self.JTN_db.get_all_games(season_id = season_id, played = "TRUE", end_date = date, any_team = team))
 
 	### Fetch the ties by the team up to and including the specified date
 	def fetch_ties(self, team, date = None):
