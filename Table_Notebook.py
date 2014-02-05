@@ -3,13 +3,17 @@ import gtk
 import gobject
 
 class Table_Notebook:
-	def __init__(self, parent, JTN_db):
+	def __init__(self, parent, parent_box, get_season_id, get_conf_id, get_date, JTN_db):
 		self.parent = parent
+		self.parent_box = parent_box
+		self.get_season_id = get_season_id
+		self.get_conf_id = get_conf_id
+		self.get_date = get_date
 		self.JTN_db = JTN_db
 
 		self.list_hbox = gtk.HBox(spacing=10)
 		self.list_hbox.set_border_width(5)
-		self.parent.table_note_vbox.pack_start(self.list_hbox)
+		self.parent_box.pack_start(self.list_hbox)
 
 		scrolled_window = gtk.ScrolledWindow()
 		scrolled_window.set_policy(gtk.POLICY_NEVER, gtk.POLICY_NEVER)
@@ -73,8 +77,8 @@ class Table_Notebook:
 
 	### Repopulate the table from the DB
 	def repop(self):
-		season_id = self.parent.season_combo.get_id()
-		conf_id = self.parent.conf_combo.get_id()
+		season_id = self.get_season_id()
+		conf_id = self.get_conf_id()
 
 		all_list = self.all_view.get_model()
 		all_list.clear()
@@ -83,25 +87,18 @@ class Table_Notebook:
 
 		for row in self.JTN_db.get_teams(season_id = season_id, conf_id = conf_id):
 			team_list.append(row)
-		#if conf_id == None:
-		#	self.parent.cur.execute("SELECT team_id FROM team_season WHERE (season_id = '" + str(season_id) + "')")
-		#else:
-		#	self.parent.cur.execute("SELECT team_id FROM team_season WHERE (season_id = '" + str(season_id) + "' AND conf_id = '" + str(conf_id) + "')")
-		#for row in self.parent.cur.fetchall():
-		#	team_list.append(get_team_from_id(self.parent.cur, row[0]))
 		team_list.sort()
 
 		for row in team_list:
 			team_id = row[0]
-			self.parent.cur.execute("SELECT team_name FROM teams WHERE id = '" + str(row[0]) + "'")
-			team_name = self.parent.cur.fetchone()[0]
+			team_name = row[1]
 
-			games_played = self.fetch_gp(team_id, self.parent.date_cal.get_date())
-			goals_scored = self.fetch_gf(team_id, self.parent.date_cal.get_date())
-			goals_against = self.fetch_ga(team_id, self.parent.date_cal.get_date())
-			num_tied = self.fetch_ties(team_id, self.parent.date_cal.get_date())
-			num_won = self.fetch_wins(team_id, self.parent.date_cal.get_date())
-			num_lost = self.fetch_loss(team_id, self.parent.date_cal.get_date())
+			games_played = self.fetch_gp(team_id, self.get_date())
+			goals_scored = self.fetch_gf(team_id, self.get_date())
+			goals_against = self.fetch_ga(team_id, self.get_date())
+			num_tied = self.fetch_ties(team_id, self.get_date())
+			num_won = self.fetch_wins(team_id, self.get_date())
+			num_lost = self.fetch_loss(team_id, self.get_date())
 
 			goal_ratio = 100 if goals_against == 0 else (float(goals_scored) / float(goals_against))
 
@@ -112,7 +109,7 @@ class Table_Notebook:
 		if date == None:
 			date_today = datetime.date.today()
 			date = date_today.isoformat()
-		season_id = self.parent.season_combo.get_id()
+		season_id = self.get_season_id()
 		self.parent.cur.execute("SELECT COUNT(*) FROM games WHERE (season_id = '" + str(season_id) + "' AND played = 'TRUE' AND date <= '" + date + "' AND (home_id = '" + str(team) + "' OR away_id = '" + str(team) + "'))")
 		games_played = self.parent.cur.fetchone()[0]
 		return games_played
@@ -122,7 +119,7 @@ class Table_Notebook:
 		if date == None:
 			date_today = datetime.date.today()
 			date = date_today.isoformat()
-		season_id = self.parent.season_combo.get_id()
+		season_id = self.get_season_id()
 		self.parent.cur.execute("SELECT COUNT(*) FROM games WHERE (season_id = '" + str(season_id) + "' AND played = 'TRUE' AND date <= '" + date + "' AND (home_id = '" + str(team) + "' OR away_id = '" + str(team) + "') AND home_goals = away_goals)")
 		num_tied = self.parent.cur.fetchone()[0]
 		return num_tied
@@ -132,7 +129,7 @@ class Table_Notebook:
 		if date == None:
 			date_today = datetime.date.today()
 			date = date_today.isoformat()
-		season_id = self.parent.season_combo.get_id()
+		season_id = self.get_season_id()
 		self.parent.cur.execute("SELECT COUNT(*) FROM games WHERE (season_id = '" + str(season_id) + "' AND played = 'TRUE' AND date <= '" + date + "' AND ((home_id = '" + str(team) + "' AND home_goals > away_goals) OR (away_id = '" + str(team) + "') AND home_goals < away_goals))")
 		num_won = self.parent.cur.fetchone()[0]
 		return num_won
@@ -142,7 +139,7 @@ class Table_Notebook:
 		if date == None:
 			date_today = datetime.date.today()
 			date = date_today.isoformat()
-		season_id = self.parent.season_combo.get_id()
+		season_id = self.get_season_id()
 		self.parent.cur.execute("SELECT COUNT(*) FROM games WHERE (season_id = '" + str(season_id) + "' AND played = 'TRUE' AND date <= '" + date + "' AND ((home_id = '" + str(team) + "' AND home_goals < away_goals) OR (away_id = '" + str(team) + "') AND home_goals > away_goals))")
 		num_lost = self.parent.cur.fetchone()[0]
 		return num_lost
@@ -158,7 +155,7 @@ class Table_Notebook:
 		if date == None:
 			date_today = datetime.date.today()
 			date = date_today.isoformat()
-		season_id = self.parent.season_combo.get_id()
+		season_id = self.get_season_id()
 		goals_scored = 0
 		self.parent.cur.execute("SELECT SUM(home_goals) FROM games WHERE (season_id = '" + str(season_id) + "' AND played = 'TRUE' AND date <= '" + date + "' AND home_id = '" + str(team) + "')")
 		goal_row = self.parent.cur.fetchone()
@@ -175,7 +172,7 @@ class Table_Notebook:
 		if date == None:
 			date_today = datetime.date.today()
 			date = date_today.isoformat()
-		season_id = self.parent.season_combo.get_id()
+		season_id = self.get_season_id()
 		goals_against = 0
 		self.parent.cur.execute("SELECT SUM(away_goals) FROM games WHERE (season_id = '" + str(season_id) + "' AND played = 'TRUE' AND date <= '" + date + "' AND home_id = '" + str(team) + "')")
 		goal_row = self.parent.cur.fetchone()
@@ -192,7 +189,7 @@ class Table_Notebook:
 		if date == None:
 			date_today = datetime.date.today()
 			date = date_today.isoformat()
-		season_id = self.parent.season_combo.get_id()
+		season_id = self.get_season_id()
 		self.parent.cur.execute("SELECT SUM(home_goals) FROM games WHERE (season_id = '" + str(season_id) + "' AND played = 'TRUE' AND date <= '" + date + "')")
 		goal_row = self.parent.cur.fetchone()
 		goals = 0
@@ -205,7 +202,7 @@ class Table_Notebook:
 		if date == None:
 			date_today = datetime.date.today()
 			date = date_today.isoformat()
-		season_id = self.parent.season_combo.get_id()
+		season_id = self.get_season_id()
 		self.parent.cur.execute("SELECT SUM(away_goals) FROM games WHERE (season_id = '" + str(season_id) + "' AND played = 'TRUE' AND date <= '" + date + "')")
 		goal_row = self.parent.cur.fetchone()
 		goals = 0
