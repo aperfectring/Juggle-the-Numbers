@@ -13,13 +13,16 @@ def poisson_pmf(k, lamb):
 	return math.pow(lamb, k) / math.factorial(k) * math.exp(-lamb)
 
 class Model_Notebook:
-	def __init__(self, parent, JTN_db):
+	def __init__(self, parent, parent_box, get_season_id, get_conf_id, JTN_db):
 		self.parent = parent
+		self.parent_box = parent_box
+		self.get_season_id = get_season_id
+		self.get_conf_id = get_conf_id
 		self.JTN_db = JTN_db
 		
 		self.list_hbox = gtk.HBox(spacing=10)
 		self.list_hbox.set_border_width(5)
-		self.parent.model_note_vbox.pack_start(self.list_hbox)
+		self.parent_box.pack_start(self.list_hbox)
 
 		scrolled_window = gtk.ScrolledWindow()
 		scrolled_window.set_policy(gtk.POLICY_NEVER, gtk.POLICY_NEVER)
@@ -48,7 +51,7 @@ class Model_Notebook:
 		self.calc_thread = threading.Thread(target=self.repop)
 
 		self.calc_progress = gtk.ProgressBar()
-		self.parent.model_note_vbox.pack_start(self.calc_progress, expand = False)
+		self.parent_box.pack_start(self.calc_progress, expand = False)
 
 		self.hfa_label = gtk.Label("HFA Adjust Value:")
 		self.hfa_entry = gtk.Entry()
@@ -56,14 +59,14 @@ class Model_Notebook:
 		self.hfa_hbox.set_border_width(5)
 		self.hfa_hbox.pack_start(self.hfa_label)
 		self.hfa_hbox.pack_start(self.hfa_entry)
-		self.parent.model_note_vbox.pack_start(self.hfa_hbox, expand = False)
+		self.parent_box.pack_start(self.hfa_hbox, expand = False)
 
 		self.calc_button = gtk.Button("Recalculate")
-		self.parent.model_note_vbox.pack_start(self.calc_button, expand = False)
+		self.parent_box.pack_start(self.calc_button, expand = False)
 		self.calc_button.connect('clicked', self.do_recalc)
 
 		self.export_button = gtk.Button("Export")
-		self.parent.model_note_vbox.pack_start(self.export_button, expand = False)
+		self.parent_box.pack_start(self.export_button, expand = False)
 		self.export_button.connect('clicked', self.export_text)
 
 		self.thread_sig = threading.Event()
@@ -78,8 +81,8 @@ class Model_Notebook:
 		f.write('<table cellspacing="0" cellpadding="3" id="'+str(model[index][0])+'">\n')
 		f.write('  <thead><tr><td>Team</td><td>PPG</td><td>Pts</td><td>1-O Pts</td><td>GP</td><td>W</td><td>L</td><td>T</td><td>GF</td><td>GA</td><td>GD</td><td>GF:GA</td><td>EAP</td></tr></thead>\n')
 
-		season_id = self.parent.season_combo.get_id()
-		conf_id = self.parent.conf_combo.get_id()
+		season_id = self.get_season_id()
+		conf_id = self.get_conf_id()
 		if conf_id == None:
 			self.parent.cur.execute("SELECT team_id FROM team_season WHERE (season_id = '" + str(season_id) + "')")
 		else:
@@ -173,8 +176,8 @@ class Model_Notebook:
 
 
 		gtk.gdk.threads_enter()
-		season_id = self.parent.season_combo.get_id()
-		conf_id = self.parent.conf_combo.get_id()
+		season_id = self.get_season_id()
+		conf_id = self.get_conf_id()
 		all_list = self.all_view.get_model()
 		all_list.clear()
 
@@ -249,7 +252,7 @@ class Model_Notebook:
 		self.hfa_entry.set_text(str(hfa_adj))
 
 		gtk.gdk.threads_enter()
-		season_id = self.parent.season_combo.get_id()
+		season_id = self.get_season_id()
 		if date == None:
 			date_today = datetime.date.today()
 			date = date_today.isoformat()
@@ -305,7 +308,7 @@ class Model_Notebook:
 	### Calculate the EAP model based on the standings at the provided date.
 	def eap_model_calc(self, date = None):
 		gtk.gdk.threads_enter()
-		season_id = self.parent.season_combo.get_id()
+		season_id = self.get_season_id()
 		gtk.gdk.threads_leave()
 		if date == None:
 			date_today = datetime.date.today()

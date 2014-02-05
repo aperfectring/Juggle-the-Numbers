@@ -1258,7 +1258,7 @@ class Base:
 		# the Table Notebook needs to be repopulated.
 		self.teams_note.register(self.table_note.repop())
 
-		self.model_note = Model_Notebook.Model_Notebook(self, self.JTN_db)
+		self.model_note = Model_Notebook.Model_Notebook(self, self.model_note_vbox, self.season_combo.get_id, self.conf_combo.get_id, self.JTN_db)
 
 		# When the Teams Notebook updates,
 		# the Model Notebook needs to be repopulated.
