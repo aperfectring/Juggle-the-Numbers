@@ -3,8 +3,11 @@ import gtk
 import gobject
 
 class Results_Notebook:
-	def __init__(self, parent):
+	def __init__(self, parent, parent_box, JTN_db):
 		self.parent = parent
+		self.parent_box = parent_box
+		self.JTN_db = JTN_db
+		
 
 		season_id = self.parent.season_combo.get_id()
 		#### There are enough strings here for 52 games in the season, AND their background colors.
@@ -119,7 +122,7 @@ class Results_Notebook:
 
 		self.list_hbox = gtk.HBox(spacing=10)
 		self.list_hbox.set_border_width(5)
-		self.parent.results_note_vbox.pack_start(self.list_hbox)
+		self.parent_box.pack_start(self.list_hbox)
 
 		scrolled_window = gtk.ScrolledWindow()
 		scrolled_window.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
@@ -161,7 +164,7 @@ class Results_Notebook:
 
 		team_list = []
 		### For each team in the league...
-		map(team_list.append, self.parent.JTN_db.get_teams(season_id = season_id))
+		map(team_list.append, self.JTN_db.get_teams(season_id = season_id))
 		team_list.sort()
 
 		for (team_id, name, city, abbr) in team_list:
@@ -183,7 +186,7 @@ class Results_Notebook:
 					goals = game[3]
 					prefix = "@"
 				
-				(other_team_id, other_team_name, other_team_city, other_team_abbr) = self.parent.JTN_db.get_team(team_id = other_team_id)
+				(other_team_id, other_team_name, other_team_city, other_team_abbr) = self.JTN_db.get_team(team_id = other_team_id)
 				if other_team_abbr != None:
 					other_team_abbr = prefix + other_team_abbr
 				else:

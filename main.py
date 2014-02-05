@@ -1069,7 +1069,7 @@ class Base:
 		self.results_note_vbox = gtk.VBox(spacing=10)
 		self.results_note_vbox.set_border_width(5)
 		self.notebook.append_page(self.results_note_vbox, gtk.Label("Results"))
-		self.results_note = Results_Notebook.Results_Notebook(self)
+		self.results_note = Results_Notebook.Results_Notebook(self, self.results_note_vbox, self.JTN_db)
 
 		# When the Games Notebook is updated,
 		# the Results Notebook needs to be repopulated
