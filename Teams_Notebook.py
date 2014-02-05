@@ -5,11 +5,11 @@ import gobject
 # id, name, city, abbr
 
 class Teams_Notebook:
-	def __init__(self, parent, parent_box, JTN_db, get_season_id):
-		self.parent = parent
+	def __init__(self, parent_box, JTN_db, get_season_id):
 		self.parent_box = parent_box
 		self.JTN_db = JTN_db
 		self.get_season_id = get_season_id
+		self.callback_list = []
 
 		self.list_hbox = gtk.HBox(spacing=10)
 		self.list_hbox.set_border_width(5)
@@ -104,6 +104,10 @@ class Teams_Notebook:
 		self.teamops_hbox.add(self.team_add_button)
 		self.team_add_button.connect('clicked', self.edit_team, self.all_view)
 
+	### Register with the class for callbacks on updates
+	def register(self, callback):
+		self.callback_list.append(callback)
+
 
 	### Fill the team lists with all teams
 	def repop(self):
@@ -125,6 +129,10 @@ class Teams_Notebook:
 			if found == 0:
 				all_list.append([row[1]])
 					
+		for callback in self.callback_list:
+			if callback:
+				callback()
+
 
 	### Get the team tuple from the provided view
 	def get_team(self, view):
@@ -186,7 +194,7 @@ class Teams_Notebook:
 
 		# Create a dialog window to prompt the user for new information.
 		dialog = gtk.Dialog("Edit Team",
-				    self.parent.window,
+				    None,
 				    gtk.DIALOG_MODAL | gtk.DIALOG_DESTROY_WITH_PARENT,
 				    (gtk.STOCK_CANCEL, gtk.RESPONSE_REJECT,
 				     gtk.STOCK_OK, gtk.RESPONSE_ACCEPT))
@@ -279,10 +287,7 @@ class Teams_Notebook:
 					self.JTN_db.create_team(name = name_entry.get_text(),
 								city = city_entry.get_text(),
 								abbr = abbr_entry.get_text())
-				self.parent.db.commit()
 
 				self.repop()
-				self.parent.table_note.repop()
-				self.parent.model_note.clear()
 
 		dialog.destroy()
