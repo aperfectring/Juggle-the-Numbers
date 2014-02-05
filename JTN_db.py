@@ -337,11 +337,14 @@ class JTN_db:
 		self.commit()
 
 	# 0:season_id, 1:date, 2:home_id, 3:home_goals, 4:home_pks, 5:away_id, 6:away_goals, 7:away_pks, 8:aet, 9:pks, 10:played, 11:game_style, 12:game_id, 13:attendance
-	def get_all_games(self, season_id = None):
+	def get_all_games(self, season_id = None, ordered = False):
+		order_text = ""
+		if ordered == True:
+			order_text = " ORDER BY date DESC"
 		if season_id != None:
-			self.cur.execute("SELECT * FROM games WHERE (season_id='" + str(season_id) + "')")
+			self.cur.execute("SELECT * FROM games WHERE (season_id='" + str(season_id) + "')" + order_text)
 		else:
-			self.cur.execute("SELECT * FROM games")
+			self.cur.execute("SELECT * FROM games" + order_text)
 		return self.cur.fetchall()
 
 	# 0:season_id, 1:date, 2:home_id, 3:home_goals, 4:home_pks, 5:away_id, 6:away_goals, 7:away_pks, 8:aet, 9:pks, 10:played, 11:game_style, 12:game_id, 13:attendance
@@ -362,3 +365,89 @@ class JTN_db:
 			self.cur.execute("SELECT * FROM games WHERE (" + where_clause + ")")
 			return self.cur.fetchone()
 		return None
+
+	def update_game(self, game_id, season_id = None, date = None, home_id = None, home_goals = None, home_pks = None, away_id = None, away_goals = None, away_pks = None, aet = None, pks = None, game_style = None, played = None, attendance = None):
+		set_arr = []
+		if season_id != None:
+			set_arr.append("season_id = '" + str(season_id) + "'")
+		if date != None:
+			set_arr.append("date = '" + str(date) + "'")
+		if home_id != None:
+			set_arr.append("home_id = '" + str(home_id) + "'")
+		if home_goals != None:
+			set_arr.append("home_goals = '" + str(home_goals) + "'")
+		if home_pks != None:
+			set_arr.append("home_pks = '" + str(home_pks) + "'")
+		if away_id != None:
+			set_arr.append("away_id = '" + str(away_id) + "'")
+		if away_goals != None:
+			set_arr.append("away_goals = '" + str(away_goals) + "'")
+		if away_pks != None:
+			set_arr.append("away_pks = '" + str(away_pks) + "'")
+		if aet != None:
+			set_arr.append("aet = '" + str(aet) + "'")
+		if pks != None:
+			set_arr.append("pks = '" + str(pks) + "'")
+		if game_style != None:
+			set_arr.append("game_style = '" + str(game_style) + "'")
+		if played != None:
+			set_arr.append("played = '" + str(played) + "'")
+		if attendance != None:
+			set_arr.append("attendance = '" + str(attendance) + "'")
+
+		set_clause = ", ".join(set_arr)
+		if len(set_clause):
+			self.cur.execute("UPDATE games SET " + set_clause +
+						"WHERE (id = '" + str(game_id) + "')")
+			self.commit()
+
+	def create_game(self, season_id = None, date = None, home_id = None, home_goals = None, home_pks = None, away_id = None, away_goals = None, away_pks = None, aet = None, pks = None, game_style = None, played = None, attendance = None):
+		set_arr = []
+		val_arr = []
+		if season_id != None:
+			set_arr.append("season_id")
+			val_arr.append("'" + str(season_id) + "'")
+		if date != None:
+			set_arr.append("date")
+			val_arr.append("'" + str(date) + "'")
+		if home_id != None:
+			set_arr.append("home_id")
+			val_arr.append("'" + str(home_id) + "'")
+		if home_goals != None:
+			set_arr.append("home_goals")
+			val_arr.append("'" + str(home_goals) + "'")
+		if home_pks != None:
+			set_arr.append("home_pks")
+			val_arr.append("'" + str(home_pks) + "'")
+		if away_id != None:
+			set_arr.append("away_id")
+			val_arr.append("'" + str(away_id) + "'")
+		if away_goals != None:
+			set_arr.append("away_goals")
+			val_arr.append("'" + str(away_goals) + "'")
+		if away_pks != None:
+			set_arr.append("away_pks")
+			val_arr.append("'" + str(away_pks) + "'")
+		if aet != None:
+			set_arr.append("aet")
+			val_arr.append("'" + str(aet) + "'")
+		if pks != None:
+			set_arr.append("pks")
+			val_arr.append("'" + str(pks) + "'")
+		if game_style != None:
+			set_arr.append("game_style")
+			val_arr.append("'" + str(game_style) + "'")
+		if played != None:
+			set_arr.append("played")
+			val_arr.append("'" + str(played) + "'")
+		if attendance != None:
+			set_arr.append("attendance")
+			val_arr.append("'" + str(attendance) + "'")
+
+		set_clause = ", ".join(set_arr)
+		val_clause = ", ".join(val_arr)
+		if len(set_clause):
+			self.cur.execute("INSERT INTO games (" + set_clause + ") " +
+					"VALUES (" + val_clause + ")")
+			self.commit()
+

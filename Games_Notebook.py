@@ -390,25 +390,19 @@ class Games_Notebook:
 			## If we are adding a game, get the latest date of a game in the list to
 			##   provide a relavent starting date.  If no games exist, use the start
 			##   date of the season.
-			self.parent.cur.execute("SELECT date FROM games WHERE season_id = '" + season_id_text + "' ORDER BY date DESC")
-			this_val = self.parent.cur.fetchone()
-			if this_val != None:
-				start_date = this_val[0]
-				datetime_obj = datetime.datetime.strptime(start_date, "%Y-%m-%d")
-				date_cal.select_month(datetime_obj.month - 1, datetime_obj.year)
-				date_cal.select_day(datetime_obj.day)
-				if datetime_obj < datetime.datetime.today():
-					played_check.set_active(True)
-				else:
-					played_check.set_active(False)
+			this_val = self.JTN_db.get_all_games(season_id = self.get_season_id(), ordered = True)
+			if len(this_val) > 0:
+				start_date = this_val[0][1]
 			else:
-				begin_date = self.parent.season_note.start_cal.get_date()
-				date_cal.select_month(begin_date[1], begin_date[0])
-				date_cal.select_day(begin_date[2])
-				if datetime.date(begin_date[0], begin_date[1] + 1, begin_date[2]) < datetime.date.today():
-					played_check.set_active(True)
-				else:
-					played_check.set_active(False)
+				this_val = self.JTN_db.get_season(season_id = self.get_season_id())
+				start_date = this_val[0]
+			datetime_obj = datetime.datetime.strptime(start_date, "%Y-%m-%d")
+			date_cal.select_month(datetime_obj.month - 1, datetime_obj.year)
+			date_cal.select_day(datetime_obj.day)
+			if datetime_obj < datetime.datetime.today():
+				played_check.set_active(True)
+			else:
+				played_check.set_active(False)
 				
 
 		response = dialog.run()
@@ -451,46 +445,35 @@ class Games_Notebook:
 					(orig_away_id, away, orig_away_city_text, orig_away_abbr_text) = self.JTN_db.get_team(abbr = away_abbr, season_id = self.get_season_id())
 					orig_home_id_text = str(orig_home_id)
 					orig_away_id_text = str(orig_away_id)
-					self.parent.cur.execute("UPDATE games SET " +
-									"date = '"       + date_text       + "', " +
-									"home_id = '"    + home_id_text    + "', " +
-									"home_goals = '" + home_goals_text + "', " +
-									"home_pks = '"   + home_pks_text   + "', " +
-									"away_id = '"    + away_id_text    + "', " +
-									"away_goals = '" + away_goals_text + "', " +
-									"away_pks = '"   + away_pks_text   + "', " +
-									"aet = '"        + aet_text        + "', " +
-									"pks = '"        + pks_text        + "', " +
-									"game_style = '" + style_num_text  + "', " +
-									"played = '"     + played_text     + "', " +
-									"attendance = '" + atten_text      + "' "  +
-								"WHERE (season_id = '" + season_id_text + "' AND " +
-									"home_id = '" + orig_home_id_text + "' AND " +
-									"away_id = '" + orig_away_id_text + "' AND " +
-									"date = '"    + date + "')")
+					game_id = self.JTN_db.get_game(season_id = self.get_season_id(), home_id = orig_home_id_text, away_id = orig_away_id_text, date = date)[12]
+					self.JTN_db.update_game(game_id = game_id,
+								date = date_text,
+								home_id = home_id_text,
+								home_goals = home_goals_text,
+								home_pks = home_pks_text,
+								away_id = away_id_text,
+								away_goals = away_goals_text,
+								away_pks = away_pks_text,
+								aet = aet_text,
+								pks = pks_text,
+								game_style = style_num_text,
+								played = played_text,
+								attendance = atten_text)
 				else:
-					self.parent.cur.execute("INSERT INTO games (season_id, date, " + 
-											"home_id, home_goals, home_pks, " + 
-											"away_id, away_goals, away_pks, " +
-											"aet, pks, game_style, played, " +
-											"attendance) " +
-										"VALUES (" +
-											"'" + season_id_text  + "', " +
-											"'" + date_text       + "', " +
-											"'" + home_id_text    + "', " +
-											"'" + home_goals_text + "', " +
-											"'" + home_pks_text   + "', " +
-											"'" + away_id_text    + "', " +
-											"'" + away_goals_text + "', " +
-											"'" + away_pks_text   + "', " +
-											"'" + aet_text        + "', " +
-											"'" + pks_text        + "', " +
-											"'" + style_num_text  + "', " +
-											"'" + played_text     + "', " +
-											"'" + atten_text      + "')")
-										
+					self.JTN_db.create_game(season_id = self.get_season_id(),
+								date = date_text,
+								home_id = home_id_text,
+								home_goals = home_goals_text,
+								home_pks = home_pks_text,
+								away_id = away_id_text,
+								away_goals = away_goals_text,
+								away_pks = away_pks_text,
+								aet = aet_text,
+								pks = pks_text,
+								game_style = style_num_text,
+								played = played_text,
+								attendance = atten_text)
 
-				self.parent.db.commit()
 				self.repop()
 
 
