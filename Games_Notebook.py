@@ -13,11 +13,11 @@ style_text_array = [
 		]
 
 class Games_Notebook:
-	def __init__(self, parent, parent_box, JTN_db, get_season_id):
-		self.parent = parent
+	def __init__(self, parent_box, JTN_db, get_season_id):
 		self.parent_box = parent_box
 		self.JTN_db = JTN_db
 		self.get_season_id = get_season_id
+		self.callback_list = []
 
 		self.list_hbox = gtk.HBox(spacing=10)
 		self.list_hbox.set_border_width(5)
@@ -108,6 +108,10 @@ class Games_Notebook:
 		self.gameops_hbox.add(self.game_delete_button)
 		self.game_delete_button.connect('clicked', self.delete_game)
 
+	### Register with the class for callbacks on updates
+	def register(self, callback):
+		self.callback_list.append(callback)
+
 
 	### Update the treeview with all games pertaining to the specified league/season
 	def repop(self):
@@ -123,11 +127,8 @@ class Games_Notebook:
 
 			all_list.append( (game[1], home_text, game[3], game[4], away_text, game[6], game[7], game[8], game[9], style_text_array[game[11]], game[10], game[13]) )
 			
-		self.parent.table_note.repop()
-		self.parent.results_note.repop()
-		self.parent.guru_note.clear()
-		self.parent.model_note.clear()
-		self.parent.atten_note.repop()
+		for callback in self.callback_list:
+			callback()
 
 	### Get the game information tuple from the treeview
 	def get_game(self, view):
@@ -218,7 +219,7 @@ class Games_Notebook:
 
 		# Create a dialog window to query the user for the game information
 		dialog = gtk.Dialog("Edit Game",
-				    self.parent.window,
+				    None,
 				    gtk.DIALOG_MODAL | gtk.DIALOG_DESTROY_WITH_PARENT,
 				    (gtk.STOCK_CANCEL, gtk.RESPONSE_REJECT,
 				     gtk.STOCK_OK, gtk.RESPONSE_ACCEPT))

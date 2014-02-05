@@ -1814,7 +1814,7 @@ class Base:
 		# the Model Notebook needs to be repopulated.
 		self.teams_note.register(self.model_note.repop())
 
-		self.games_note = Games_Notebook.Games_Notebook(self, self.games_note_vbox, self.JTN_db, self.season_combo.get_id)
+		self.games_note = Games_Notebook.Games_Notebook(self.games_note_vbox, self.JTN_db, self.season_combo.get_id)
 
 		# When the Conference Combo selection changes,
 		# the Games Notebook needs to be repopulated
@@ -1824,20 +1824,41 @@ class Base:
 		# the Games Notebook needs to be repopulated
 		self.date_cal.register(self.games_note.repop)
 
+		# When the Games Notebook is updated,
+		# the Table Notebook needs to be repopulated
+		self.games_note.register(self.table_note.repop)
+
+		# When the Games Notebook is updated,
+		# the Model Notebook needs to be repopulated
+		self.games_note.register(self.model_note.clear)
+
 		self.results_note_vbox = gtk.VBox(spacing=10)
 		self.results_note_vbox.set_border_width(5)
 		self.notebook.append_page(self.results_note_vbox, gtk.Label("Results"))
 		self.results_note = Results_Notebook(self)
+
+		# When the Games Notebook is updated,
+		# the Results Notebook needs to be repopulated
+		self.games_note.register(self.results_note.repop)
 
 		self.guru_note_vbox = gtk.VBox(spacing=10)
 		self.guru_note_vbox.set_border_width(5)
 		self.notebook.append_page(self.guru_note_vbox, gtk.Label("Guru"))
 		self.guru_note = Guru_Notebook(self)
 
+		# When the Games Notebook is updated,
+		# the Guru Notebook needs to be repopulated
+		self.games_note.register(self.guru_note.clear)
+
 		self.atten_note_vbox = gtk.VBox(spacing=10)
 		self.atten_note_vbox.set_border_width(5)
 		self.notebook.append_page(self.atten_note_vbox, gtk.Label("Attendance"))
 		self.atten_note = Attendance_Notebook(self)
+
+		# When the Games Notebook is updated,
+		# the Attendance Notebook needs to be repopulated
+		self.games_note.register(self.atten_note.repop)
+
 
 		self.league_combo.repop()
 		self.window.show_all()
