@@ -118,9 +118,7 @@ class Table_Notebook:
 			date_today = datetime.date.today()
 			date = date_today.isoformat()
 		season_id = self.get_season_id()
-		self.parent.cur.execute("SELECT COUNT(*) FROM games WHERE (season_id = '" + str(season_id) + "' AND played = 'TRUE' AND date <= '" + date + "' AND (home_id = '" + str(team) + "' OR away_id = '" + str(team) + "') AND home_goals = away_goals)")
-		num_tied = self.parent.cur.fetchone()[0]
-		return num_tied
+		return len(self.JTN_db.get_all_games(season_id = season_id, played = "TRUE", end_date = date, any_team = team, game_tied = "TRUE"))
 
 	### Fetch the wins by the team up to and including the specified date
 	def fetch_wins(self, team, date = None):
@@ -128,9 +126,9 @@ class Table_Notebook:
 			date_today = datetime.date.today()
 			date = date_today.isoformat()
 		season_id = self.get_season_id()
-		self.parent.cur.execute("SELECT COUNT(*) FROM games WHERE (season_id = '" + str(season_id) + "' AND played = 'TRUE' AND date <= '" + date + "' AND ((home_id = '" + str(team) + "' AND home_goals > away_goals) OR (away_id = '" + str(team) + "') AND home_goals < away_goals))")
-		num_won = self.parent.cur.fetchone()[0]
-		return num_won
+		num_wins = len(self.JTN_db.get_all_games(season_id = season_id, played = "TRUE", end_date = date, home_team = team, home_win = "TRUE"))
+		num_wins = num_wins + len(self.JTN_db.get_all_games(season_id = season_id, played = "TRUE", end_date = date, away_team = team, away_win = "TRUE"))
+		return num_wins
 
 	### Fetch the losses by the team up to and including the specified date
 	def fetch_loss(self, team, date = None):
@@ -138,9 +136,9 @@ class Table_Notebook:
 			date_today = datetime.date.today()
 			date = date_today.isoformat()
 		season_id = self.get_season_id()
-		self.parent.cur.execute("SELECT COUNT(*) FROM games WHERE (season_id = '" + str(season_id) + "' AND played = 'TRUE' AND date <= '" + date + "' AND ((home_id = '" + str(team) + "' AND home_goals < away_goals) OR (away_id = '" + str(team) + "') AND home_goals > away_goals))")
-		num_lost = self.parent.cur.fetchone()[0]
-		return num_lost
+		num_loss = len(self.JTN_db.get_all_games(season_id = season_id, played = "TRUE", end_date = date, home_team = team, away_win = "TRUE"))
+		num_loss = num_loss + len(self.JTN_db.get_all_games(season_id = season_id, played = "TRUE", end_date = date, away_team = team, home_win = "TRUE"))
+		return num_loss
 
 	### Fetch the points earned by the team up to and including the specified date
 	def fetch_pts(self, team, date = None):
