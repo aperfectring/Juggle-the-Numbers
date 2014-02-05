@@ -256,6 +256,7 @@ class JTN_db:
 				"VALUES ('" + name + "')")
 		self.commit()
 
+	# id, name, city, abbr
 	def get_team(self, team_id = None, name = None, abbr = None, season_id = None):
 		if team_id != None:
 			self.cur.execute("SELECT * FROM teams WHERE (id='" + str(team_id) + "')")
@@ -330,3 +331,10 @@ class JTN_db:
 				      abbr + "')")
 		self.commit()
 
+	# season_id, date, home_id, home_goals, home_pks, away_id, away_goals, away_pks, aet, pks, played, game_style, game_id, attendance
+	def get_all_games(self, season_id = None):
+		if season_id != None:
+			self.cur.execute("SELECT * FROM games WHERE (season_id='" + str(season_id) + "')")
+		else:
+			self.cur.execute("SELECT * FROM games")
+		return self.cur.fetchall()

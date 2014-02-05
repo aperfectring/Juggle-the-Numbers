@@ -115,23 +115,14 @@ class Games_Notebook:
 		all_list = self.all_view.get_model()
 
 		all_list.clear()
-		self.parent.cur.execute("SELECT date, " + 
-						"home_id, home_goals, home_pks, " + 
-						"away_id, away_goals, away_pks, " +
-						"aet, pks, game_style, played, " +
-						"attendance " + 
-					"FROM games WHERE (season_id='" + str(sid) + "')")
-		for row in self.parent.cur.fetchall():
-			self.parent.cur.execute("SELECT abbr FROM teams WHERE (id='" + str(row[1]) + "')")
-			for team_names in self.parent.cur.fetchall():
-				home_text = team_names[0]
+		all_games = self.JTN_db.get_all_games(sid)
+		for game in all_games:
+			home_text = self.JTN_db.get_team(team_id = game[2])[3] # 3rd item is abbr
 
-			self.parent.cur.execute("SELECT abbr FROM teams WHERE (id='" + str(row[4]) + "')")
-			for team_names in self.parent.cur.fetchall():
-				away_text = team_names[0]
+			away_text = self.JTN_db.get_team(team_id = game[5])[3] # 3rd item is abbr
 
-			all_list.append( (row[0], home_text, row[2], row[3], away_text, row[5], row[6], row[7], row[8], style_text_array[row[9]], row[10], row[11]) )
-
+			all_list.append( (game[1], home_text, game[3], game[4], away_text, game[6], game[7], game[8], game[9], style_text_array[game[11]], game[10], game[13]) )
+			
 		self.parent.table_note.repop()
 		self.parent.results_note.repop()
 		self.parent.guru_note.clear()
