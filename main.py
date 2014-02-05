@@ -463,8 +463,8 @@ class Guru_Notebook:
 
 			start_date = self.start_cal.get_date()
 			start_date_str = str(start_date[0]) + "-" + str(start_date[1]+1).zfill(2) + "-" + str(start_date[2]).zfill(2)
-			league_home_gf = self.parent.table_note.fetch_home_goals(start_date_str)
-			league_away_gf = self.parent.table_note.fetch_away_goals(start_date_str)
+			league_home_gf = self.parent.JTN_db.fetch_home_goals(season_id, start_date_str)
+			league_away_gf = self.parent.JTN_db.fetch_away_goals(season_id, start_date_str)
 			if(league_away_gf != 0):
 				hfa_adj = math.sqrt(float(league_home_gf) / float(league_away_gf))
 			else:
@@ -473,13 +473,13 @@ class Guru_Notebook:
 			if(hfa_adj == 0):
 				hfa_adj = 0.01
 			
-			home_gf = float(self.parent.table_note.fetch_gf(int(home_id), start_date_str))
-			home_ga = float(self.parent.table_note.fetch_ga(int(home_id), start_date_str))
-			home_gp = float(self.parent.table_note.fetch_gp(int(home_id), start_date_str))
+			home_gf = float(self.parent.JTN_db.fetch_gf(season_id, int(home_id), start_date_str))
+			home_ga = float(self.parent.JTN_db.fetch_ga(season_id, int(home_id), start_date_str))
+			home_gp = float(self.parent.JTN_db.fetch_gp(season_id, int(home_id), start_date_str))
 
-			away_gf = float(self.parent.table_note.fetch_gf(int(away_id), start_date_str))
-			away_ga = float(self.parent.table_note.fetch_ga(int(away_id), start_date_str))
-			away_gp = float(self.parent.table_note.fetch_gp(int(away_id), start_date_str))
+			away_gf = float(self.parent.JTN_db.fetch_gf(season_id, int(away_id), start_date_str))
+			away_ga = float(self.parent.JTN_db.fetch_ga(season_id, int(away_id), start_date_str))
+			away_gp = float(self.parent.JTN_db.fetch_gp(season_id, int(away_id), start_date_str))
 			
 			home_exp_gf = self.parent.model_note.basic_model_exp_goals_cal(home_gf, away_ga, home_gp, away_gp, hfa_adj)
 			away_exp_gf = self.parent.model_note.basic_model_exp_goals_cal(away_gf, home_ga, away_gp, home_gp, 1/hfa_adj)
@@ -500,13 +500,14 @@ class Guru_Notebook:
 		all_list = self.all_view.get_model()
 		all_list.clear()
 		self.prob_entry.set_text("")
+		season_id = self.parent.season_combo.get_id()
 
 		start_date_str = str(start_date[0]) + "-" + str(start_date[1]+1).zfill(2) + "-" + str(start_date[2]).zfill(2)
 		end_date_str = str(end_date[0]) + "-" + str(end_date[1]+1).zfill(2) + "-" + str(end_date[2]).zfill(2)
 
 		### Calculate the HFA adjustment for the starting date of the range
-		league_home_gf = self.parent.table_note.fetch_home_goals(start_date_str)
-		league_away_gf = self.parent.table_note.fetch_away_goals(start_date_str)
+		league_home_gf = self.parent.JTN_db.fetch_home_goals(season_id, start_date_str)
+		league_away_gf = self.parent.JTN_db.fetch_away_goals(season_id, start_date_str)
 		if(league_away_gf != 0):
 			hfa_adj = math.sqrt(float(league_home_gf) / float(league_away_gf))
 		else:
@@ -516,7 +517,6 @@ class Guru_Notebook:
 			hfa_adj = 0.01
 
 
-		season_id = self.parent.season_combo.get_id()
 
 		### For each game within the date range
 		self.parent.cur.execute("SELECT home_id, away_id, date FROM games WHERE (season_id = '" + str(season_id) + "' AND date >= DATE('" + start_date_str + "') AND date <= DATE('" + end_date_str + "')) ORDER BY date")
@@ -533,13 +533,13 @@ class Guru_Notebook:
 
 			text = row[2] + " " + home_abbr + "-" + away_abbr
 
-			home_gf = float(self.parent.table_note.fetch_gf(int(row[0]), start_date_str))
-			home_ga = float(self.parent.table_note.fetch_ga(int(row[0]), start_date_str))
-			home_gp = float(self.parent.table_note.fetch_gp(int(row[0]), start_date_str))
+			home_gf = float(self.parent.JTN_db.fetch_gf(season_id, int(row[0]), start_date_str))
+			home_ga = float(self.parent.JTN_db.fetch_ga(season_id, int(row[0]), start_date_str))
+			home_gp = float(self.parent.JTN_db.fetch_gp(season_id, int(row[0]), start_date_str))
 
-			away_gf = float(self.parent.table_note.fetch_gf(int(row[1]), start_date_str))
-			away_ga = float(self.parent.table_note.fetch_ga(int(row[1]), start_date_str))
-			away_gp = float(self.parent.table_note.fetch_gp(int(row[1]), start_date_str))
+			away_gf = float(self.parent.JTN_db.fetch_gf(season_id, int(row[1]), start_date_str))
+			away_ga = float(self.parent.JTN_db.fetch_ga(season_id, int(row[1]), start_date_str))
+			away_gp = float(self.parent.JTN_db.fetch_gp(season_id, int(row[1]), start_date_str))
 
 			home_exp_gf = self.parent.model_note.basic_model_exp_goals_cal(home_gf, away_ga, home_gp, away_gp, hfa_adj)
 			away_exp_gf = self.parent.model_note.basic_model_exp_goals_cal(away_gf, home_ga, away_gp, home_gp, 1/hfa_adj)
@@ -1258,7 +1258,7 @@ class Base:
 		# the Table Notebook needs to be repopulated.
 		self.teams_note.register(self.table_note.repop)
 
-		self.model_note = Model_Notebook.Model_Notebook(self, self.model_note_vbox, self.season_combo.get_id, self.conf_combo.get_id, self.JTN_db)
+		self.model_note = Model_Notebook.Model_Notebook(self, self.model_note_vbox, self.season_combo.get_id, self.conf_combo.get_id, self.date_cal.get_date, self.JTN_db)
 
 		# When the Teams Notebook updates,
 		# the Model Notebook needs to be repopulated.

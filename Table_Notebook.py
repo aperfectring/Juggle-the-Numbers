@@ -92,104 +92,14 @@ class Table_Notebook:
 			team_id = row[0]
 			team_name = row[1]
 
-			games_played = self.fetch_gp(team_id, self.get_date())
-			goals_scored = self.fetch_gf(team_id, self.get_date())
-			goals_against = self.fetch_ga(team_id, self.get_date())
-			num_tied = self.fetch_ties(team_id, self.get_date())
-			num_won = self.fetch_wins(team_id, self.get_date())
-			num_lost = self.fetch_loss(team_id, self.get_date())
+			games_played = self.JTN_db.fetch_gp(season_id, team_id, self.get_date())
+			goals_scored = self.JTN_db.fetch_gf(season_id, team_id, self.get_date())
+			goals_against = self.JTN_db.fetch_ga(season_id, team_id, self.get_date())
+			num_tied = self.JTN_db.fetch_ties(season_id, team_id, self.get_date())
+			num_won = self.JTN_db.fetch_wins(season_id, team_id, self.get_date())
+			num_lost = self.JTN_db.fetch_loss(season_id, team_id, self.get_date())
 
 			goal_ratio = 100 if goals_against == 0 else (float(goals_scored) / float(goals_against))
 
 			all_list.append( (team_name, games_played, num_won, num_lost, num_tied, goals_scored, goals_against, goals_scored - goals_against, goal_ratio, 3*num_won + num_tied) )
 
-	### Fetch the games played by the team up to and including the specified date
-	def fetch_gp(self, team, date = None):
-		if date == None:
-			date_today = datetime.date.today()
-			date = date_today.isoformat()
-		season_id = self.get_season_id()
-		return len(self.JTN_db.get_all_games(season_id = season_id, played = "TRUE", end_date = date, any_team = team))
-
-	### Fetch the ties by the team up to and including the specified date
-	def fetch_ties(self, team, date = None):
-		if date == None:
-			date_today = datetime.date.today()
-			date = date_today.isoformat()
-		season_id = self.get_season_id()
-		return len(self.JTN_db.get_all_games(season_id = season_id, played = "TRUE", end_date = date, any_team = team, game_tied = "TRUE"))
-
-	### Fetch the wins by the team up to and including the specified date
-	def fetch_wins(self, team, date = None):
-		if date == None:
-			date_today = datetime.date.today()
-			date = date_today.isoformat()
-		season_id = self.get_season_id()
-		num_wins = len(self.JTN_db.get_all_games(season_id = season_id, played = "TRUE", end_date = date, home_team = team, home_win = "TRUE"))
-		num_wins = num_wins + len(self.JTN_db.get_all_games(season_id = season_id, played = "TRUE", end_date = date, away_team = team, away_win = "TRUE"))
-		return num_wins
-
-	### Fetch the losses by the team up to and including the specified date
-	def fetch_loss(self, team, date = None):
-		if date == None:
-			date_today = datetime.date.today()
-			date = date_today.isoformat()
-		season_id = self.get_season_id()
-		num_loss = len(self.JTN_db.get_all_games(season_id = season_id, played = "TRUE", end_date = date, home_team = team, away_win = "TRUE"))
-		num_loss = num_loss + len(self.JTN_db.get_all_games(season_id = season_id, played = "TRUE", end_date = date, away_team = team, home_win = "TRUE"))
-		return num_loss
-
-	### Fetch the points earned by the team up to and including the specified date
-	def fetch_pts(self, team, date = None):
-		num_tied = self.fetch_ties(team, date)
-		num_won = self.fetch_wins(team, date)
-		return (3 * num_won + num_tied)
-
-	### Fetch the goals scored by the team up to and including the specified date
-	def fetch_gf(self, team, date = None):
-		if date == None:
-			date_today = datetime.date.today()
-			date = date_today.isoformat()
-		season_id = self.get_season_id()
-
-		home_games = self.JTN_db.get_all_games(season_id = season_id, played = "TRUE", end_date = date, home_team = team)
-		goals_scored = sum(map(lambda x: x[3], home_games))
-
-		away_games = self.JTN_db.get_all_games(season_id = season_id, played = "TRUE", end_date = date, away_team = team)
-		goals_scored += sum(map(lambda x: x[6], away_games))
-
-		return goals_scored
-
-	### Fetch the goals against the team up to and including the specified date
-	def fetch_ga(self, team, date = None):
-		if date == None:
-			date_today = datetime.date.today()
-			date = date_today.isoformat()
-		season_id = self.get_season_id()
-
-		home_games = self.JTN_db.get_all_games(season_id = season_id, played = "TRUE", end_date = date, home_team = team)
-		goals_against = sum(map(lambda x: x[6], home_games))
-
-		away_games = self.JTN_db.get_all_games(season_id = season_id, played = "TRUE", end_date = date, away_team = team)
-		goals_against += sum(map(lambda x: x[3], away_games))
-
-		return goals_against
-
-	### Fetch the goals scored by home teams up to and including the specified date
-	def fetch_home_goals(self, date = None):
-		if date == None:
-			date_today = datetime.date.today()
-			date = date_today.isoformat()
-		season_id = self.get_season_id()
-		home_games = self.JTN_db.get_all_games(season_id = season_id, played = "TRUE", end_date = date)
-		return sum(map(lambda x: x[3], home_games))
-
-	### Fetch the goals scored by away teams up to and including the specified date
-	def fetch_away_goals(self, date = None):
-		if date == None:
-			date_today = datetime.date.today()
-			date = date_today.isoformat()
-		season_id = self.get_season_id()
-
-		away_games = self.JTN_db.get_all_games(season_id = season_id, played = "TRUE", end_date = date)
-		return sum(map(lambda x: x[6], away_games))

@@ -13,11 +13,12 @@ def poisson_pmf(k, lamb):
 	return math.pow(lamb, k) / math.factorial(k) * math.exp(-lamb)
 
 class Model_Notebook:
-	def __init__(self, parent, parent_box, get_season_id, get_conf_id, JTN_db):
+	def __init__(self, parent, parent_box, get_season_id, get_conf_id, get_date, JTN_db):
 		self.parent = parent
 		self.parent_box = parent_box
 		self.get_season_id = get_season_id
 		self.get_conf_id = get_conf_id
+		self.get_date = get_date
 		self.JTN_db = JTN_db
 		
 		self.list_hbox = gtk.HBox(spacing=10)
@@ -74,41 +75,7 @@ class Model_Notebook:
 
 	### Export the table+models in the format expected by the JuggleTheNumbers website
 	def export_text(self, button):
-		model = self.parent.league_combo.combo.get_model()
-		index = self.parent.league_combo.combo.get_active()
-		f = open('outfile', 'w')
-		f.write('<br />\n')
-		f.write('<table cellspacing="0" cellpadding="3" id="'+str(model[index][0])+'">\n')
-		f.write('  <thead><tr><td>Team</td><td>PPG</td><td>Pts</td><td>1-O Pts</td><td>GP</td><td>W</td><td>L</td><td>T</td><td>GF</td><td>GA</td><td>GD</td><td>GF:GA</td><td>EAP</td></tr></thead>\n')
-
-		season_id = self.get_season_id()
-		conf_id = self.get_conf_id()
-		for team in self.JTN_db.get_teams(season_id = season_id, conf_id = conf_id):
-			(myid, name, city, abbr) = self.JTN_db.get_team(team_id = team[0])
-			pts = self.parent.table_note.fetch_pts(myid)
-			gp = self.parent.table_note.fetch_gp(myid)
-			ppg = round(float(pts)/float(gp),2)
-			basic = self.fetch_basic(name)
-			wins = self.parent.table_note.fetch_wins(myid)
-			loss = self.parent.table_note.fetch_loss(myid)
-			ties = self.parent.table_note.fetch_ties(myid)
-			gf = self.parent.table_note.fetch_gf(myid)
-			ga = self.parent.table_note.fetch_ga(myid)
-			gd = gf - ga
-			if(ga != 0):
-				gfga = '{0:.2f}'.format(float(gf) / float(ga))
-			else:
-				gfga = 'N/A'
-			eap = self.fetch_eap(name)
-
-			f.write("  <tr><td>"+str(abbr)+"</td><td>"+'{0:.2f}'.format(ppg)+"</td><td>"+str(pts)+"</td><td>"+'{0:.2f}'.format(basic)+"</td><td>"+str(gp)+"</td><td>"+str(wins)+"</td><td>"+str(loss)+"</td><td>"+str(ties)+"</td><td>"+str(gf)+"</td><td>"+str(ga)+"</td><td>"+str(gd)+"</td><td>"+str(gfga)+"</td><td>"+'{0:.2f}'.format(eap)+"</td></tr>\n")
-		f.write("</table>\n")
-		f.write('<script type="text/javascript">\n')
-		model = self.parent.league_combo.combo.get_model()
-		index = self.parent.league_combo.combo.get_active()
-		f.write("var "+str(model[index][0])+" = new SortableTable(document.getElementById('"+str(model[index][0])+"'), 100);\n")
-		f.write("</script>\n")
-		f.close()
+		print "JTN website format no longer needed.  Function remains for potential future export formats."
 
 	### Fetch the basic model value for the team specified
 	def fetch_basic(self, name):
@@ -161,10 +128,10 @@ class Model_Notebook:
 		self.calc_progress.set_fraction(0)
 		self.calc_progress.set_text("Calculating...")		
 		gtk.gdk.threads_leave()
-		basic_pts = self.basic_model_calc(self.parent.date_cal.get_date())
+		basic_pts = self.basic_model_calc(self.get_date())
 		if self.thread_sig.wait(0.01):
 			return
-		eap_ppg = self.eap_model_calc(self.parent.date_cal.get_date())
+		eap_ppg = self.eap_model_calc(self.get_date())
 		if self.thread_sig.wait(0.01):
 			return
 
@@ -230,8 +197,8 @@ class Model_Notebook:
 	### Calculates the basic model for all unplayed games, and all games after the specified date
 	def basic_model_calc(self, date = None):
 		gtk.gdk.threads_enter()
-		league_home_gf = self.parent.table_note.fetch_home_goals(date)
-		league_away_gf = self.parent.table_note.fetch_away_goals(date)
+		league_home_gf = self.JTN_db.fetch_home_goals(self.get_season_id(), date)
+		league_away_gf = self.JTN_db.fetch_away_goals(self.get_season_id(), date)
 		gtk.gdk.threads_leave()
 
 		### Calculate the home field advantage adjustment
