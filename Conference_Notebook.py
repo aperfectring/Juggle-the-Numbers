@@ -113,17 +113,12 @@ class Conference_Notebook:
 		cur_confs = self.JTN_db.get_confs_by_season(sid)
 
 		for row in self.JTN_db.get_confs():
-			found = 0
-			for conf in cur_confs:
-				if row[0] == conf[1]:
-					league_list.append([row[1]])
-					found = 1
-					break
-			if found == 0:
+			if row[0] in map(lambda x: x[1], cur_confs):
+				league_list.append([row[1]])
+			else:
 				all_list.append([row[1]])
 				
-		for callback in self.callback_list:
-			callback()
+		map(lambda x: x(), self.callback_list)
 
 	def get_conf(self, view):
 		all_list = view.get_model()

@@ -85,8 +85,7 @@ class Table_Notebook:
 
 		team_list = []
 
-		for row in self.JTN_db.get_teams(season_id = season_id, conf_id = conf_id):
-			team_list.append(row)
+		map(team_list.append, self.JTN_db.get_teams(season_id = season_id, conf_id = conf_id))
 		team_list.sort()
 
 		for row in team_list:

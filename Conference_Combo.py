@@ -29,18 +29,15 @@ class Conference_Combo:
 
 		self.combo.append_text("Whole League")
 
-		for row in self.JTN_db.get_confs_by_season(season_id = season_id):
-			(conf_id, conf_name) = self.JTN_db.get_conf(conf_id = row[1])
-			if conf_name != None:
-				self.combo.append_text(conf_name)
+		map(lambda x: self.combo.append_text(self.JTN_db.get_conf(conf_id = x[1])[1]),
+                    self.JTN_db.get_confs_by_season(season_id = season_id))
 
 		self.combo_changed_id = self.combo.connect('changed', self.update)
 		self.combo.set_active(0)
 
 	### Callback which triggers the recalculation of other widgets when the combo box is changed.
 	def update(self, button):
-		for callback in self.callback_list:
-			callback()
+		map(lambda x: x(), self.callback_list)
 
 
 	### Fetch the unique ID of the currently selected conference

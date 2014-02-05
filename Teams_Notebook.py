@@ -120,18 +120,12 @@ class Teams_Notebook:
 		cur_teams = self.JTN_db.get_teams_by_season(sid)
 
 		for row in self.JTN_db.get_teams():
-			found = 0
-			for team in cur_teams:
-				if row[0] == team[0]:
-					league_list.append([row[1]])
-					found = 1
-					break
-			if found == 0:
+			if row[0] in map(lambda x: x[0], cur_teams):
+				league_list.append([row[1]])
+			else:
 				all_list.append([row[1]])
 					
-		for callback in self.callback_list:
-			if callback:
-				callback()
+		map(lambda x:  x(), filter(lambda x: x, self.callback_list))
 
 
 	### Get the team tuple from the provided view
@@ -242,18 +236,15 @@ class Teams_Notebook:
 			conf_hbox.pack_start(conf_label)
 			conf_combo = gtk.combo_box_new_text()
 			conf_combo.append_text("None")
-			for row in self.JTN_db.get_confs_by_season(self.get_season_id()):
-				conf_name = self.JTN_db.get_conf(conf_id = str(row[1]))
-				if conf_name:
-					conf_combo.append_text(conf_name[1])
+
+			map(lambda x: conf_combo.append_text(self.JTN_db.get_conf(conf_id = x[1])[1]),
+			    self.JTN_db.get_confs_by_season(self.get_season_id()))
 			model = conf_combo.get_model()
 			conf_combo.set_active(0)
 			if conf_id:
-				conf_name = self.JTN_db.get_conf(conf_id = conf_id)
+				conf_name = self.JTN_db.get_conf(conf_id = conf_id)[1]
 				if conf_name:
-					for index in range(0, len(model)):
-						if model[index][0] == conf_name[1]:
-							conf_combo.set_active(index)
+					map(conf_combo.set_active, filter(lambda x: model[x][0] == conf_name, range(0, len(model))))
 			conf_combo.show()
 			conf_hbox.pack_start(conf_combo)
 

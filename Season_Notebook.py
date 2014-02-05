@@ -55,8 +55,7 @@ class Season_Notebook:
 		else:
 			new_name = str(start_date[0]) + "-" + str(end_date[0])
 
-		for callback in self.callback_list:
-			callback(new_name)
+		map(lambda x: x(), self.callback_list)
 
 
 	### Update the start date calendar with the appropriate year, month, and day

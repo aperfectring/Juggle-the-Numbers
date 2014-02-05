@@ -26,5 +26,4 @@ class Date_Calendar:
 		return datetime.date(year, month+1, day).isoformat()
 		
 	def repop(self, calendar):
-		for callback in self.callback_list:
-			callback()
+		map(lambda x: x(), self.callback_list)

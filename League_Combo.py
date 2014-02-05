@@ -36,10 +36,7 @@ class League_Combo:
 	### Callback for when the league combobox is changed
 	###    Calls all registered callbacks in the order they were registered
 	def update(self, combobox):
-		for callback in self.callback_list:
-			callback()
-
-		return
+		map(lambda x: x(), self.callback_list)
 
 	### Callback for the "Add league" button
 	###    This will create a "blank" league
@@ -52,9 +49,7 @@ class League_Combo:
 
 		self.combo.append_text(text)
 		model = self.combo.get_model()
-		for index in range(0,len(model)):
-			if (model[index][0] == text):
-				self.combo.set_active(index)
+		map(self.combo.set_active, filter(lambda x:model[x][0] == text, range(0,len(model))))
 
 	### Determine the League Unique database ID based on the currently selected league from the combobox
 	def get_id(self):
@@ -72,17 +67,12 @@ class League_Combo:
 		for index in range(0, len(model)):
 			self.combo.remove_text(0)
 
-		all_rows = self.JTN_db.get_leagues()
-                for row in all_rows:
-			self.combo.append_text(row[0])
+		map(lambda x: self.combo.append_text(x[0]), self.JTN_db.get_leagues())
 
 		model = self.combo.get_model()
 		self.combo_changed_id = self.combo.connect('changed', self.update)
 		if select_val != None:
-			for index in range(0, len(model)):
-				if model[index][0] == select_val:
-					self.combo.set_active(index)
-					return
-		if(len(model)>0):
+			map(self.combo.set_active, filter(lambda x:model[x][0] == select_val, range(0,len(model))))
+		elif(len(model)>0):
 			self.combo.set_active(0)
 		return						

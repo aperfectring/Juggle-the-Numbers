@@ -27,8 +27,7 @@ class Season_Combo:
 	### Callback handler for when the season combobox changes
 	###   Updates the season notebook page
 	def update(self, combobox):
-		for callback in self.callback_list:
-			callback()
+		map(lambda x: x(), self.callback_list)
 
 
 
@@ -92,10 +91,7 @@ class Season_Combo:
 		model = self.combo.get_model()
 		self.combo_changed_id = self.combo.connect('changed', self.update)
 		if select_val != None:
-			for index in range(0, len(model)):
-				if model[index][0] == select_val:
-					self.combo.set_active(index)
-					return
-		if(len(model)>0):
+			map(self.combo.set_active, filter(lambda x: model[x][0] == select_val, range(0, len(model))))
+		elif(len(model)>0):
 			self.combo.set_active(0)
 		return						

@@ -127,8 +127,7 @@ class Games_Notebook:
 
 			all_list.append( (game[1], home_text, game[3], game[4], away_text, game[6], game[7], game[8], game[9], style_text_array[game[11]], game[10], game[13]) )
 			
-		for callback in self.callback_list:
-			callback()
+		map(lambda x: x(), self.callback_list)
 
 	### Get the game information tuple from the treeview
 	def get_game(self, view):
@@ -169,14 +168,11 @@ class Games_Notebook:
 	def pop_team_combo(self, combo):
 		row = None
 		team_list = []
-		for row in self.JTN_db.get_teams(season_id = self.get_season_id()):
-			team_list.append(row[3])
+		map(lambda x: team_list.append(x[3]),
+		    self.JTN_db.get_teams(season_id = self.get_season_id()))
 		team_list.sort()
-		for name in team_list:
-			combo.append_text(name)
+		map(combo.append_text, team_list)
 
-		if row:
-			combo.set_active(0)
 
 
 	### Delete the game selected in the treeview
@@ -328,8 +324,7 @@ class Games_Notebook:
 		et_hbox.pack_start(pk_check)
 
 		style_combo = gtk.combo_box_new_text()
-		for this_text in style_text_array:
-			style_combo.append_text(this_text)
+		map(style_combo.append_text, style_text_array)
 		style_combo.set_active(0)
 		style_combo.show()
 		et_hbox.pack_start(style_combo)
@@ -360,16 +355,12 @@ class Games_Notebook:
 			date_cal.select_month(datetime_obj.month - 1, datetime_obj.year)
 			date_cal.select_day(datetime_obj.day)
 			model = home_combo.get_model()
-			for index in range(0,len(model)):
-				if model[index][0] == home_abbr:
-					home_combo.set_active(index)
+			map(home_combo.set_active, filter(lambda x: model[x][0] == home_abbr, range(0,len(model))))
 			homegoals_spin.set_value(int(home_goals))
 			homepks_spin.set_value(int(home_pks))
 
 			model = away_combo.get_model()
-			for index in range(0,len(model)):
-				if model[index][0] == away_abbr:
-					away_combo.set_active(index)
+			map(away_combo.set_active, filter(lambda x: model[x][0] == away_abbr, range(0,len(model))))
 			awaygoals_spin.set_value(int(away_goals))
 			awaypks_spin.set_value(int(away_pks))
 
@@ -377,9 +368,7 @@ class Games_Notebook:
 			pk_check.set_active(True if (pks == "TRUE") else False)
 			played_check.set_active(True if (played == "TRUE") else False)
 			model = style_combo.get_model()
-			for index in range(0,len(model)):
-				if model[index][0] == style:
-					style_combo.set_active(index)
+			map(style_combo.set_active, filter(lambda x: model[x][0] == style, range(0,len(model))))
 
 			if attendance == "NULL":
 				atten_spin.set_value(-1)

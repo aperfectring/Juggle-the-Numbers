@@ -79,8 +79,7 @@ class League_Notebook:
 					confed = self.confed_entry.get_text(),
 					level = self.level_entry.get_text())
 
-		for callback in self.callback_list:
-			callback(self.name_entry.get_text())
+		map(lambda x: x(), self.callback_list)
 
 	def set(self, name = "", confed = "", level = "", country = ""):
 
