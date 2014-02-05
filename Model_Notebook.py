@@ -13,8 +13,7 @@ def poisson_pmf(k, lamb):
 	return math.pow(lamb, k) / math.factorial(k) * math.exp(-lamb)
 
 class Model_Notebook:
-	def __init__(self, parent, parent_box, get_season_id, get_conf_id, get_date, JTN_db):
-		self.parent = parent
+	def __init__(self, parent_box, get_season_id, get_conf_id, get_date, JTN_db):
 		self.parent_box = parent_box
 		self.get_season_id = get_season_id
 		self.get_conf_id = get_conf_id
@@ -227,10 +226,10 @@ class Model_Notebook:
 		### Fetch all of the basic stats for each team
 		gtk.gdk.threads_enter()
 		for team in self.JTN_db.get_teams(season_id = season_id):
-			team_points[team[0]] = self.parent.table_note.fetch_pts(int(team[0]), date)
-			team_gf[team[0]] = float(self.parent.table_note.fetch_gf(int(team[0]), date))
-			team_ga[team[0]] = float(self.parent.table_note.fetch_ga(int(team[0]), date))
-			team_gp[team[0]] = float(self.parent.table_note.fetch_gp(int(team[0]), date))
+			team_points[team[0]] = self.JTN_db.fetch_pts(season_id, int(team[0]), date)
+			team_gf[team[0]] = float(self.JTN_db.fetch_gf(season_id, int(team[0]), date))
+			team_ga[team[0]] = float(self.JTN_db.fetch_ga(season_id, int(team[0]), date))
+			team_gp[team[0]] = float(self.JTN_db.fetch_gp(season_id, int(team[0]), date))
 		gtk.gdk.threads_leave()
 
 		### Iterate through all of the unplayed games + games after the specified date, and
@@ -276,9 +275,9 @@ class Model_Notebook:
 		team_ppg = {}
 		for team in self.JTN_db.get_teams(season_id = season_id):
 			gtk.gdk.threads_enter()
-			team_gp = float(self.parent.table_note.fetch_gp(int(team[0]), date))
-			team_gf = float(self.parent.table_note.fetch_gf(int(team[0]), date))
-			team_ga = float(self.parent.table_note.fetch_ga(int(team[0]), date))
+			team_gp = float(self.JTN_db.fetch_gp(season_id, int(team[0]), date))
+			team_gf = float(self.JTN_db.fetch_gf(season_id, int(team[0]), date))
+			team_ga = float(self.JTN_db.fetch_ga(season_id, int(team[0]), date))
 			if(team_gp != 0):
 				exp_gf = team_gf / team_gp
 				exp_ga = team_ga / team_gp

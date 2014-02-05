@@ -3,8 +3,7 @@ import gtk
 import gobject
 
 class Table_Notebook:
-	def __init__(self, parent, parent_box, get_season_id, get_conf_id, get_date, JTN_db):
-		self.parent = parent
+	def __init__(self, parent_box, get_season_id, get_conf_id, get_date, JTN_db):
 		self.parent_box = parent_box
 		self.get_season_id = get_season_id
 		self.get_conf_id = get_conf_id

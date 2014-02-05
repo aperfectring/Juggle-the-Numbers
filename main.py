@@ -1252,13 +1252,13 @@ class Base:
 		self.model_note_vbox.set_border_width(5)
 		self.notebook.append_page(self.model_note_vbox, gtk.Label("Model"))
 
-		self.table_note = Table_Notebook.Table_Notebook(self, self.table_note_vbox, self.season_combo.get_id, self.conf_combo.get_id, self.date_cal.get_date, self.JTN_db)
+		self.table_note = Table_Notebook.Table_Notebook(self.table_note_vbox, self.season_combo.get_id, self.conf_combo.get_id, self.date_cal.get_date, self.JTN_db)
 
 		# When the Teams Notebook updates,
 		# the Table Notebook needs to be repopulated.
 		self.teams_note.register(self.table_note.repop)
 
-		self.model_note = Model_Notebook.Model_Notebook(self, self.model_note_vbox, self.season_combo.get_id, self.conf_combo.get_id, self.date_cal.get_date, self.JTN_db)
+		self.model_note = Model_Notebook.Model_Notebook(self.model_note_vbox, self.season_combo.get_id, self.conf_combo.get_id, self.date_cal.get_date, self.JTN_db)
 
 		# When the Teams Notebook updates,
 		# the Model Notebook needs to be repopulated.
