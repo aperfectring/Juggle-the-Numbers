@@ -271,8 +271,13 @@ class JTN_db:
 		return self.cur.fetchone()
 
 	# id, name, city, abbr
-	def get_teams(self):
-		self.cur.execute("SELECT * FROM teams")
+	def get_teams(self, season_id = None):
+		if season_id != None:
+			self.cur.execute("SELECT * FROM teams WHERE (id IN (" + 
+						"SELECT team_id FROM team_season WHERE (season_id = '" + str(season_id) + "')" +
+						"))")
+		else:
+			self.cur.execute("SELECT * FROM teams")
 		return self.cur.fetchall()
 
 	# team, season, conf
@@ -331,10 +336,29 @@ class JTN_db:
 				      abbr + "')")
 		self.commit()
 
-	# season_id, date, home_id, home_goals, home_pks, away_id, away_goals, away_pks, aet, pks, played, game_style, game_id, attendance
+	# 0:season_id, 1:date, 2:home_id, 3:home_goals, 4:home_pks, 5:away_id, 6:away_goals, 7:away_pks, 8:aet, 9:pks, 10:played, 11:game_style, 12:game_id, 13:attendance
 	def get_all_games(self, season_id = None):
 		if season_id != None:
 			self.cur.execute("SELECT * FROM games WHERE (season_id='" + str(season_id) + "')")
 		else:
 			self.cur.execute("SELECT * FROM games")
 		return self.cur.fetchall()
+
+	# 0:season_id, 1:date, 2:home_id, 3:home_goals, 4:home_pks, 5:away_id, 6:away_goals, 7:away_pks, 8:aet, 9:pks, 10:played, 11:game_style, 12:game_id, 13:attendance
+	def get_game(self, season_id = None, home_id = None, away_id = None, date = None):
+		parts_arr = []
+
+		if season_id != None:
+			parts_arr.append("season_id = '" + str(season_id) + "'")
+		if home_id != None:
+			parts_arr.append("home_id = '" + str(home_id) + "'")
+		if away_id != None:
+			parts_arr.append("away_id = '" + str(away_id) + "'")
+		if date != None:
+			parts_arr.append("date = '" + date + "'")
+
+		where_clause = " AND ".join(parts_arr)
+		if len(where_clause):
+			self.cur.execute("SELECT * FROM games WHERE (" + where_clause + ")")
+			return self.cur.fetchone()
+		return None

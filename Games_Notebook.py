@@ -168,12 +168,8 @@ class Games_Notebook:
 	def pop_team_combo(self, combo):
 		row = None
 		team_list = []
-		self.parent.cur.execute("SELECT team_id FROM team_season WHERE (season_id='" + str(self.get_season_id()) + "')")
-		for row in self.parent.cur.fetchall():
-			self.parent.cur.execute("SELECT abbr FROM teams WHERE (id='" + str(row[0]) + "')")
-			for name in self.parent.cur.fetchall():
-				#combo.append_text(name[0])
-				team_list.append(name[0])
+		for row in self.JTN_db.get_teams(season_id = self.get_season_id()):
+			team_list.append(row[3])
 		team_list.sort()
 		for name in team_list:
 			combo.append_text(name)
@@ -181,11 +177,6 @@ class Games_Notebook:
 		if row:
 			combo.set_active(0)
 
-	### Delete the specified game
-	def delete_game_by_id(self, game_id):
-		self.parent.cur.execute("DELETE FROM games WHERE (id = '" + str(game_id) + "')")
-		self.parent.db.commit()
-		
 
 	### Delete the game selected in the treeview
 	def delete_game(self, button):
@@ -199,13 +190,9 @@ class Games_Notebook:
 		(home_id, home_text, home_city_text, home_abbr_text) = self.JTN_db.get_team(abbr = home, season_id = self.get_season_id())
 		(away_id, away_text, away_city_text, away_abbr_text) = self.JTN_db.get_team(abbr = away, season_id = self.get_season_id())
 
-		self.parent.cur.execute("SELECT id FROM games WHERE (season_id = '" + str(self.get_season_id()) + "' AND " +
-								    "home_id = '" + str(home_id) + "' AND " +
-								    "away_id = '" + str(away_id) + "' AND " +
-								    "date = '"    + date + "')")
-		row = self.parent.cur.fetchone()
+		row = self.JTN_db.get_game(season_id = self.get_season_id(), home_id = home_id, away_id = away_id, date = date)
 		if row != None:
-			self.delete_game_by_id(row[0])
+			self.JTN_db.delete_games(game_id = row[12])
 
 		self.repop()
 
