@@ -4,13 +4,14 @@ import gobject
 import math
 
 class Guru_Notebook:
-	def __init__(self, parent, JTN_db):
+	def __init__(self, parent, parent_box, JTN_db):
 		self.parent = parent
+		self.parent_box = parent_box
 		self.JTN_db = JTN_db
 
 		self.cal_hbox = gtk.HBox(spacing=10)
 		self.cal_hbox.set_border_width(5)
-		self.parent.guru_note_vbox.pack_start(self.cal_hbox, expand = False)		
+		self.parent_box.pack_start(self.cal_hbox, expand = False)		
 
 		self.start_vbox = gtk.VBox(spacing=10)
 		self.start_vbox.set_border_width(5)
@@ -59,7 +60,7 @@ class Guru_Notebook:
 
 		scrolled_window = gtk.ScrolledWindow()
 		scrolled_window.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
-		self.parent.guru_note_vbox.pack_start(scrolled_window)
+		self.parent_box.pack_start(scrolled_window)
 
 		list_store = gtk.ListStore(gobject.TYPE_STRING,		# Date
 						gobject.TYPE_STRING,	# Home Team
@@ -132,7 +133,7 @@ class Guru_Notebook:
 		self.all_view.append_column(column)
 
 		self.recalc_button = gtk.Button("Recalculate")
-		self.parent.guru_note_vbox.pack_start(self.recalc_button, expand = False)
+		self.parent_box.pack_start(self.recalc_button, expand = False)
 		self.recalc_button.connect('clicked', self.repop)
 
 		self.hg_label = gtk.Label("HG:")
@@ -149,7 +150,7 @@ class Guru_Notebook:
 		self.goals_hbox.pack_start(self.hg_spin)
 		self.goals_hbox.pack_start(self.ag_label)
 		self.goals_hbox.pack_start(self.ag_spin)
-		self.parent.guru_note_vbox.pack_start(self.goals_hbox, expand = False)
+		self.parent_box.pack_start(self.goals_hbox, expand = False)
 		
 		self.prob_label = gtk.Label("Probability:")
 		self.prob_entry = gtk.Entry()
@@ -160,7 +161,7 @@ class Guru_Notebook:
 		self.prob_hbox.pack_start(self.prob_label)
 		self.prob_hbox.pack_start(self.prob_entry)
 		self.prob_hbox.pack_start(self.prob_recalc_button)
-		self.parent.guru_note_vbox.pack_start(self.prob_hbox, expand = False)
+		self.parent_box.pack_start(self.prob_hbox, expand = False)
 
 	def repop_prob(self, button):
 		model = self.all_view.get_model()
