@@ -193,10 +193,7 @@ class Model_Notebook:
 		gtk.gdk.threads_leave()
 
 		### Calculate the home field advantage adjustment
-		if(league_away_gf != 0):
-			hfa_adj = math.sqrt(float(league_home_gf) / float(league_away_gf))
-		else:
-			hfa_adj = 1.0
+		hfa_adj = math.sqrt(float(league_home_gf) / float(league_away_gf)) if (league_away_gf != 0) else 1.0
 
 		if(hfa_adj == 0):
 			hfa_adj = 0.01

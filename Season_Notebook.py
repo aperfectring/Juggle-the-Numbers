@@ -50,10 +50,10 @@ class Season_Notebook:
 
 		self.JTN_db.set_season(season_id, start_date_str, end_date_str)
 
-		if(start_date[0] == end_date[0]):
-			new_name = str(start_date[0])
-		else:
-			new_name = str(start_date[0]) + "-" + str(end_date[0])
+		new_name = str(start_date[0])
+		
+		if(start_date[0] != end_date[0]):
+			new_name += "-" + str(end_date[0])
 
 		map(lambda x: x(), self.callback_list)
 

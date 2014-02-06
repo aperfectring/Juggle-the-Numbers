@@ -119,11 +119,12 @@ class Teams_Notebook:
 
 		cur_teams = self.JTN_db.get_teams_by_season(sid)
 
-		for row in self.JTN_db.get_teams():
-			if row[0] in map(lambda x: x[0], cur_teams):
-				league_list.append([row[1]])
-			else:
-				all_list.append([row[1]])
+		# Checks each team to see if it is in the list
+		#    of teams associated with this season
+		map(lambda x: league_list.append([x[1]]) \
+				if (x[0] in [i[0] for i in cur_teams]) \
+				else all_list.append([x[1]]),
+			self.JTN_db.get_teams())
 					
 		map(lambda x:  x(), filter(lambda x: x, self.callback_list))
 
@@ -164,10 +165,7 @@ class Teams_Notebook:
 	### Create/edit the details of a team
 	def edit_team(self, button, view, has_season = False):
 		# Determine if we are editing an already existing team, or creating a new one
-		if button.get_label() == "Edit team":
-			edit = True
-		else:
-			edit = False
+		edit = True if (button.get_label() == "Edit team") else False
 
 		if view == None:
 			return

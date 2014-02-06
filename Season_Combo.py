@@ -61,10 +61,7 @@ class Season_Combo:
 				season_end = seasons[1]
 		row = self.JTN_db.get_season(league_id = league_id, start_year = season_start, end_year = season_end)
 			
-		if row != None:
-			return row[2]
-		else:
-			return None
+		return row[2] if row != None else None
 
 	### Deletes all season combobox entries, then repopulates the combobox with appriopriate ones for this season
 	###   Will attempt to select an entry which has the value of select_val, if specified

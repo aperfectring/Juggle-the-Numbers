@@ -327,11 +327,7 @@ class JTN_db:
 		return self.cur.fetchone()
 		
 	def set_team_conf(self, team_id, season_id, conf_id):
-		conf_text = None
-		if conf_id == None:
-			conf_text = "conf_id = NULL"
-		else:
-			conf_text = "conf_id = " + str(conf_id)
+		conf_text = "conf_id = NULL" if (conf_id == None) else "conf_id = " + str(conf_id)
 		self.cur.execute("UPDATE team_season SET " + conf_text + 
 				" WHERE (team_id = '" + str(team_id) + "' " +
 					"AND season_id = '" + str(season_id) + "')")

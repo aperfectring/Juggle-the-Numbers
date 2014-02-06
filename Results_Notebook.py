@@ -148,10 +148,7 @@ class Results_Notebook:
 
 		### Add columns to the treeview for each game in the season for each team.
 		row = self.JTN_db.get_teams(season_id = season_id)
-		if len(row):
-			team_id = row[0][0]
-		else:
-			team_id = 0
+		team_id = row[0][0] if len(row) else 0
 
 		count = len(self.JTN_db.get_all_games(season_id = season_id, any_team = team_id))
 		for n in range(0,count):
@@ -180,11 +177,11 @@ class Results_Notebook:
 					prefix = "@"
 		
 				(other_team_id, other_team_name, other_team_city, other_team_abbr) = self.JTN_db.get_team(team_id = other_team_id)
+				text = prefix
 				if other_team_abbr != None:
-					other_team_abbr = prefix + other_team_abbr
-				else:
-					other_team_abbr = prefix
-				text = other_team_abbr + "\n"
+					text += other_team_abbr
+				text += "\n"
+
 
 				if game[10] == "TRUE":
 					text += str(game[3])
