@@ -177,10 +177,7 @@ class Guru_Notebook:
 			start_date_str = str(start_date[0]) + "-" + str(start_date[1]+1).zfill(2) + "-" + str(start_date[2]).zfill(2)
 			league_home_gf = self.JTN_db.fetch_home_goals(season_id, start_date_str)
 			league_away_gf = self.JTN_db.fetch_away_goals(season_id, start_date_str)
-			if(league_away_gf != 0):
-				hfa_adj = math.sqrt(float(league_home_gf) / float(league_away_gf))
-			else:
-				hfa_adj = 1.0
+			hfa_adj = math.sqrt(float(league_home_gf) / float(league_away_gf)) if (league_away_gf != 0) else 1.0
 
 			if(hfa_adj == 0):
 				hfa_adj = 0.01
@@ -220,11 +217,8 @@ class Guru_Notebook:
 		### Calculate the HFA adjustment for the starting date of the range
 		league_home_gf = self.JTN_db.fetch_home_goals(season_id, start_date_str)
 		league_away_gf = self.JTN_db.fetch_away_goals(season_id, start_date_str)
-		if(league_away_gf != 0):
-			hfa_adj = math.sqrt(float(league_home_gf) / float(league_away_gf))
-		else:
-			hfa_adj = 1.0
-
+		hfa_adj = math.sqrt(float(league_home_gf) / float(league_away_gf)) if (league_away_gf != 0) else 1.0
+		
 		if(hfa_adj == 0):
 			hfa_adj = 0.01
 
