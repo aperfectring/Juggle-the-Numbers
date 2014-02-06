@@ -4,14 +4,6 @@ import gobject
 import threading
 import math
 
-### Calculate the Poisson distribution CDF for given values of k and lambda
-def poisson_cdf(k, lamb):
-	return sum(map(lambda x:poisson_pmf(x,lamb), range(0,k+1)))
-
-### Calculate the Poisson distribution PMF for given values of k and lambda
-def poisson_pmf(k, lamb):
-	return math.pow(lamb, k) / math.factorial(k) * math.exp(-lamb)
-
 class Model_Notebook:
 	def __init__(self, parent_box, get_season_id, get_conf_id, get_date, JTN_db):
 		self.parent_box = parent_box
@@ -161,9 +153,9 @@ class Model_Notebook:
 		team_goals_adj = opp_goals_base - min(team_goals_base, opp_goals_base)
 		opp_goals_adj = team_goals_base - min(team_goals_base, opp_goals_base)
 
-		win_chance = sum(map(lambda x: poisson_pmf(x, opp_exp_gf), range(0,opp_goals_adj)))
+		win_chance = sum(map(lambda x: self.JTN_db.poisson_pmf(x, opp_exp_gf), range(0,opp_goals_adj)))
 
-		win_chance += sum(map(lambda x: poisson_pmf(x + opp_goals_adj, opp_exp_gf) * (1 - poisson_cdf(x + team_goals_adj, team_exp_gf)), range(0,100)))
+		win_chance += sum(map(lambda x: self.JTN_db.poisson_pmf(x + opp_goals_adj, opp_exp_gf) * (1 - self.JTN_db.poisson_cdf(x + team_goals_adj, team_exp_gf)), range(0,100)))
 
 		return win_chance
 
@@ -176,7 +168,7 @@ class Model_Notebook:
 		opp_goals_adj = team_goals_base - min(team_goals_base, opp_goals_base)
 
 		tie_chance = 0.0
-		tie_chance = sum(map(lambda x: poisson_pmf(x + team_goals_adj, team_exp_gf) * poisson_pmf(x + opp_goals_adj, opp_exp_gf), range(0,100)))
+		tie_chance = sum(map(lambda x: self.JTN_db.poisson_pmf(x + team_goals_adj, team_exp_gf) * self.JTN_db.poisson_pmf(x + opp_goals_adj, opp_exp_gf), range(0,100)))
 
 		return tie_chance
 

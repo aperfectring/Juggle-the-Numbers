@@ -1,11 +1,22 @@
 
 import sqlite3
 import datetime
+import math
 
 class JTN_db:
 	def __init__(self):
 		self.db = None
 		self.cur = None
+
+	### Calculate the Poisson distribution CDF for given values of k and lambda
+	def poisson_cdf(self, k, lamb):
+		return sum(map(lambda x:self.poisson_pmf(x,lamb), range(0,k+1)))
+
+	### Calculate the Poisson distribution PMF for given values of k and lambda
+	def poisson_pmf(self, k, lamb):
+		return math.pow(lamb, k) / math.factorial(k) * math.exp(-lamb)
+
+
 
 	def upgrade_db_to_v2(self):
 		print "Got a version 1 DB, upgrading to version 2"
