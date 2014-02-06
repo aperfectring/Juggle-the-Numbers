@@ -112,12 +112,13 @@ class Conference_Notebook:
 
 		cur_confs = self.JTN_db.get_confs_by_season(sid)
 
-		for row in self.JTN_db.get_confs():
-			if row[0] in map(lambda x: x[1], cur_confs):
-				league_list.append([row[1]])
-			else:
-				all_list.append([row[1]])
-				
+		# Checks each conference to see if it is in the
+		#    list of conferences associated with this season.
+		map(lambda x:league_list.append([x[1]]) \
+				if (x[0] in [i[1] for i in cur_confs]) \
+				else all_list.append([x[1]]),
+			self.JTN_db.get_confs())
+
 		map(lambda x: x(), self.callback_list)
 
 	def get_conf(self, view):
@@ -149,10 +150,7 @@ class Conference_Notebook:
 
 	def edit_conf(self, button, view):
 		#Determine if we are editing an already existing conference, or creating a new one
-		if button.get_label() == "Edit conf":
-			edit = True
-		else:
-			edit = False
+		edit = True if (button.get_label() == "Edit conf") else False
 
 		if view == None:
 			return
@@ -181,12 +179,11 @@ class Conference_Notebook:
 			name_entry.set_text(name)
 
 		response = dialog.run()
-		if response == gtk.RESPONSE_ACCEPT:
-			if name_entry.get_text() != "":
-				if edit == True:
-					self.JTN_db.set_conf(name, name_entry.get_text())
-				else:
-					self.JTN_db.create_conf(name_entry.get_text())
-				self.repop()
+		if response == gtk.RESPONSE_ACCEPT and name_entry.get_text() != "":
+			if edit == True:
+				self.JTN_db.set_conf(name, name_entry.get_text())
+			else:
+				self.JTN_db.create_conf(name_entry.get_text())
+			self.repop()
 
 		dialog.destroy()
