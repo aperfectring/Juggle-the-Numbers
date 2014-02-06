@@ -197,10 +197,7 @@ class Games_Notebook:
 	### Add a new game, or edit an already existing game
 	def edit_game(self, button):
 		# Determine if we are editing, or adding, a game
-		if button.get_label() == "Edit game":
-			edit = True
-		else:
-			edit = False
+		edit = True if button.get_label() == "Edit game" else False
 
 		all_list = self.all_view.get_model()
 		# If editing, try to fetch the appropriate game information
@@ -370,29 +367,21 @@ class Games_Notebook:
 			model = style_combo.get_model()
 			map(style_combo.set_active, filter(lambda x: model[x][0] == style, range(0,len(model))))
 
-			if attendance == "NULL":
-				atten_spin.set_value(-1)
-			elif attendance:
-				atten_spin.set_value(int(attendance))
-			else:
-				atten_spin.set_value(-1)
+			map(lambda x: atten_spin.set_value(x),
+				[int(attendance)] if (attendance and attendance != "NULL") else [-1])
+
 		else:
 			## If we are adding a game, get the latest date of a game in the list to
 			##   provide a relavent starting date.  If no games exist, use the start
 			##   date of the season.
 			this_val = self.JTN_db.get_all_games(season_id = self.get_season_id(), ordered = True)
-			if len(this_val) > 0:
-				start_date = this_val[0][1]
-			else:
-				this_val = self.JTN_db.get_season(season_id = self.get_season_id())
-				start_date = this_val[0]
+			start_date = this_val[0][1] if len(this_val) > 0 \
+				else self.JTN_db.get_season(season_id = self.get_season_id())[0]
 			datetime_obj = datetime.datetime.strptime(start_date, "%Y-%m-%d")
 			date_cal.select_month(datetime_obj.month - 1, datetime_obj.year)
 			date_cal.select_day(datetime_obj.day)
-			if datetime_obj < datetime.datetime.today():
-				played_check.set_active(True)
-			else:
-				played_check.set_active(False)
+			map(lambda x: played_check.set_active(x),
+				[True] if datetime_obj < datetime.datetime.today() else [False])
 				
 
 		response = dialog.run()
