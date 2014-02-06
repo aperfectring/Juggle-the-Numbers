@@ -4,8 +4,9 @@ import gobject
 import math
 
 class Guru_Notebook:
-	def __init__(self, parent):
+	def __init__(self, parent, JTN_db):
 		self.parent = parent
+		self.JTN_db = JTN_db
 
 		self.cal_hbox = gtk.HBox(spacing=10)
 		self.cal_hbox.set_border_width(5)
@@ -168,13 +169,13 @@ class Guru_Notebook:
 			itera = model.iter_nth_child(None, self.all_view.get_cursor()[0][0])
 			home_abbr = model.get_value(itera, 1)
 			away_abbr = model.get_value(itera, 2)
-			(home_id, home, home_city, home_abbr) = self.parent.JTN_db.get_team(abbr = home_abbr, season_id = season_id)
-			(away_id, away, away_city, away_abbr) = self.parent.JTN_db.get_team(abbr = away_abbr, season_id = season_id)
+			(home_id, home, home_city, home_abbr) = self.JTN_db.get_team(abbr = home_abbr, season_id = season_id)
+			(away_id, away, away_city, away_abbr) = self.JTN_db.get_team(abbr = away_abbr, season_id = season_id)
 
 			start_date = self.start_cal.get_date()
 			start_date_str = str(start_date[0]) + "-" + str(start_date[1]+1).zfill(2) + "-" + str(start_date[2]).zfill(2)
-			league_home_gf = self.parent.JTN_db.fetch_home_goals(season_id, start_date_str)
-			league_away_gf = self.parent.JTN_db.fetch_away_goals(season_id, start_date_str)
+			league_home_gf = self.JTN_db.fetch_home_goals(season_id, start_date_str)
+			league_away_gf = self.JTN_db.fetch_away_goals(season_id, start_date_str)
 			if(league_away_gf != 0):
 				hfa_adj = math.sqrt(float(league_home_gf) / float(league_away_gf))
 			else:
@@ -183,19 +184,19 @@ class Guru_Notebook:
 			if(hfa_adj == 0):
 				hfa_adj = 0.01
 			
-			home_gf = float(self.parent.JTN_db.fetch_gf(season_id, int(home_id), start_date_str))
-			home_ga = float(self.parent.JTN_db.fetch_ga(season_id, int(home_id), start_date_str))
-			home_gp = float(self.parent.JTN_db.fetch_gp(season_id, int(home_id), start_date_str))
+			home_gf = float(self.JTN_db.fetch_gf(season_id, int(home_id), start_date_str))
+			home_ga = float(self.JTN_db.fetch_ga(season_id, int(home_id), start_date_str))
+			home_gp = float(self.JTN_db.fetch_gp(season_id, int(home_id), start_date_str))
 
-			away_gf = float(self.parent.JTN_db.fetch_gf(season_id, int(away_id), start_date_str))
-			away_ga = float(self.parent.JTN_db.fetch_ga(season_id, int(away_id), start_date_str))
-			away_gp = float(self.parent.JTN_db.fetch_gp(season_id, int(away_id), start_date_str))
+			away_gf = float(self.JTN_db.fetch_gf(season_id, int(away_id), start_date_str))
+			away_ga = float(self.JTN_db.fetch_ga(season_id, int(away_id), start_date_str))
+			away_gp = float(self.JTN_db.fetch_gp(season_id, int(away_id), start_date_str))
 			
 			home_exp_gf = self.parent.model_note.basic_model_exp_goals_cal(home_gf, away_ga, home_gp, away_gp, hfa_adj)
 			away_exp_gf = self.parent.model_note.basic_model_exp_goals_cal(away_gf, home_ga, away_gp, home_gp, 1/hfa_adj)
 
-			home_prob = self.parent.JTN_db.poisson_pmf(self.hg_spin.get_value(), home_exp_gf)
-			away_prob = self.parent.JTN_db.poisson_pmf(self.ag_spin.get_value(), away_exp_gf)
+			home_prob = self.JTN_db.poisson_pmf(self.hg_spin.get_value(), home_exp_gf)
+			away_prob = self.JTN_db.poisson_pmf(self.ag_spin.get_value(), away_exp_gf)
 			prob = home_prob * away_prob
 			self.prob_entry.set_text(str(prob))
 		
@@ -216,8 +217,8 @@ class Guru_Notebook:
 		end_date_str = str(end_date[0]) + "-" + str(end_date[1]+1).zfill(2) + "-" + str(end_date[2]).zfill(2)
 
 		### Calculate the HFA adjustment for the starting date of the range
-		league_home_gf = self.parent.JTN_db.fetch_home_goals(season_id, start_date_str)
-		league_away_gf = self.parent.JTN_db.fetch_away_goals(season_id, start_date_str)
+		league_home_gf = self.JTN_db.fetch_home_goals(season_id, start_date_str)
+		league_away_gf = self.JTN_db.fetch_away_goals(season_id, start_date_str)
 		if(league_away_gf != 0):
 			hfa_adj = math.sqrt(float(league_home_gf) / float(league_away_gf))
 		else:
@@ -233,8 +234,8 @@ class Guru_Notebook:
 		for row in self.parent.cur.fetchall():
 
 			### Calculate the win-tie-loss chances for the specified game
-			(home_id, home_name, home_city, home_abbr) = self.parent.JTN_db.get_team(team_id = row[0])
-			(away_id, away_name, away_city, away_abbr) = self.parent.JTN_db.get_team(team_id = row[1])
+			(home_id, home_name, home_city, home_abbr) = self.JTN_db.get_team(team_id = row[0])
+			(away_id, away_name, away_city, away_abbr) = self.JTN_db.get_team(team_id = row[1])
 
 			if home_abbr == None:
 				home_abbr = " "
@@ -243,13 +244,13 @@ class Guru_Notebook:
 
 			text = row[2] + " " + home_abbr + "-" + away_abbr
 
-			home_gf = float(self.parent.JTN_db.fetch_gf(season_id, int(row[0]), start_date_str))
-			home_ga = float(self.parent.JTN_db.fetch_ga(season_id, int(row[0]), start_date_str))
-			home_gp = float(self.parent.JTN_db.fetch_gp(season_id, int(row[0]), start_date_str))
+			home_gf = float(self.JTN_db.fetch_gf(season_id, int(row[0]), start_date_str))
+			home_ga = float(self.JTN_db.fetch_ga(season_id, int(row[0]), start_date_str))
+			home_gp = float(self.JTN_db.fetch_gp(season_id, int(row[0]), start_date_str))
 
-			away_gf = float(self.parent.JTN_db.fetch_gf(season_id, int(row[1]), start_date_str))
-			away_ga = float(self.parent.JTN_db.fetch_ga(season_id, int(row[1]), start_date_str))
-			away_gp = float(self.parent.JTN_db.fetch_gp(season_id, int(row[1]), start_date_str))
+			away_gf = float(self.JTN_db.fetch_gf(season_id, int(row[1]), start_date_str))
+			away_ga = float(self.JTN_db.fetch_ga(season_id, int(row[1]), start_date_str))
+			away_gp = float(self.JTN_db.fetch_gp(season_id, int(row[1]), start_date_str))
 
 			home_exp_gf = self.parent.model_note.basic_model_exp_goals_cal(home_gf, away_ga, home_gp, away_gp, hfa_adj)
 			away_exp_gf = self.parent.model_note.basic_model_exp_goals_cal(away_gf, home_ga, away_gp, home_gp, 1/hfa_adj)
@@ -258,26 +259,26 @@ class Guru_Notebook:
 			### Calculate the most likely number of goals scored for the home team
 			goal_prob = []
 			index = 0
-			goal_calc = self.parent.JTN_db.poisson_pmf(index, home_exp_gf)
+			goal_calc = self.JTN_db.poisson_pmf(index, home_exp_gf)
 			prev_goal_calc = goal_calc
 			goal_prob.append(goal_calc)
 			while prev_goal_calc <= goal_calc:
 				prev_goal_calc = goal_calc
 				index = index + 1
-				goal_calc = self.parent.JTN_db.poisson_pmf(index, home_exp_gf)
+				goal_calc = self.JTN_db.poisson_pmf(index, home_exp_gf)
 			
 			home_max_prob = index - 1
 
 			### Calculate the most likely number of goals scored for the away team
 			goal_prob = []
 			index = 0
-			goal_calc = self.parent.JTN_db.poisson_pmf(index, away_exp_gf)
+			goal_calc = self.JTN_db.poisson_pmf(index, away_exp_gf)
 			prev_goal_calc = goal_calc
 			goal_prob.append(goal_calc)
 			while prev_goal_calc <= goal_calc:
 				prev_goal_calc = goal_calc
 				index = index + 1
-				goal_calc = self.parent.JTN_db.poisson_pmf(index, away_exp_gf)
+				goal_calc = self.JTN_db.poisson_pmf(index, away_exp_gf)
 
 			away_max_prob = index - 1
 
@@ -297,11 +298,11 @@ class Guru_Notebook:
 					exp_guru_pts_tie[home_goals].append(0.0)
 					exp_guru_pts_away[home_goals].append(0.0)
 					if home_goals == away_goals:
-						exp_guru_pts_tie[home_goals][away_goals] += 2 * tie_chance + self.parent.JTN_db.poisson_pmf(home_goals, home_exp_gf) + self.parent.JTN_db.poisson_pmf(away_goals, away_exp_gf)
+						exp_guru_pts_tie[home_goals][away_goals] += 2 * tie_chance + self.JTN_db.poisson_pmf(home_goals, home_exp_gf) + self.JTN_db.poisson_pmf(away_goals, away_exp_gf)
 					elif home_goals > away_goals:
-						exp_guru_pts_home[home_goals][away_goals] += 2 * home_win_chance + self.parent.JTN_db.poisson_pmf(home_goals, home_exp_gf) + self.parent.JTN_db.poisson_pmf(away_goals, away_exp_gf)
+						exp_guru_pts_home[home_goals][away_goals] += 2 * home_win_chance + self.JTN_db.poisson_pmf(home_goals, home_exp_gf) + self.JTN_db.poisson_pmf(away_goals, away_exp_gf)
 					else:
-						exp_guru_pts_away[home_goals][away_goals] += 2 * away_win_chance + self.parent.JTN_db.poisson_pmf(home_goals, home_exp_gf) + self.parent.JTN_db.poisson_pmf(away_goals, away_exp_gf)
+						exp_guru_pts_away[home_goals][away_goals] += 2 * away_win_chance + self.JTN_db.poisson_pmf(home_goals, home_exp_gf) + self.JTN_db.poisson_pmf(away_goals, away_exp_gf)
 			max_exp_guru_pts_home = [max(exp_guru_pts_home[x]) for x in range(10)]
 			max_exp_guru_pts_away = [max(exp_guru_pts_away[x]) for x in range(10)]
 			max_exp_guru_pts_tie  = [max(exp_guru_pts_tie[x])  for x in range(10)]

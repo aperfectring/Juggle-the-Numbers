@@ -757,7 +757,7 @@ class Base:
 		self.guru_note_vbox = gtk.VBox(spacing=10)
 		self.guru_note_vbox.set_border_width(5)
 		self.notebook.append_page(self.guru_note_vbox, gtk.Label("Guru"))
-		self.guru_note = Guru_Notebook.Guru_Notebook(self)
+		self.guru_note = Guru_Notebook.Guru_Notebook(self, self.JTN_db)
 
 		# When the Games Notebook is updated,
 		# the Guru Notebook needs to be repopulated
