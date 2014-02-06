@@ -342,11 +342,15 @@ class JTN_db:
 		self.commit()
 
 	# 0:season_id, 1:date, 2:home_id, 3:home_goals, 4:home_pks, 5:away_id, 6:away_goals, 7:away_pks, 8:aet, 9:pks, 10:played, 11:game_style, 12:game_id, 13:attendance
-	def get_all_games(self, season_id = None, ordered = False, played = None, start_date = None, end_date = None, date = None, home_team = None, away_team = None, any_team = None, home_win = None, away_win = None, game_tied = None, unplayed_after = None):
+	def get_all_games(self, season_id = None, ordered = False, played = None, start_date = None, end_date = None, date = None, home_team = None, away_team = None, any_team = None, home_win = None, away_win = None, game_tied = None, unplayed_after = None, order_asc = None):
 		order_text = ""
 		where_parts = []
 		if ordered == True:
-			order_text = " ORDER BY date DESC"
+			order_text = " ORDER BY date"
+			if order_asc != None:
+				order_text += " ASC"
+			else:
+				order_text += " DESC"
 
 		if season_id != None:
 			where_parts.append("season_id='" + str(season_id) + "'")
