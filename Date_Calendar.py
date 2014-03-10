@@ -3,11 +3,13 @@ import gtk
 import datetime
 
 class Date_Calendar:
-	def __init__(self, parent_box):
+	def __init__(self, parent_box, label_txt = None):
 		self.parent_box = parent_box
 		self.callback_list = []
 
-		self.label = gtk.Label("Date:")
+		if label_txt == None:
+			label_txt = "Date:"
+		self.label = gtk.Label(label_txt)
 		self.parent_box.pack_start(self.label, expand=False)
 
 		self.calendar = gtk.Calendar()
