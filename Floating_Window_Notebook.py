@@ -154,7 +154,7 @@ class Floating_Window_Notebook:
 		if season_id:
 			team_list = []
 			map(team_list.append, self.JTN_db.get_teams(season_id = season_id))
-			team_list.sort()
+			team_list.sort(key=lambda x: x[1])
 
 			for team in team_list:
 				gms1_start = self.calc_window(team, games = 1, end_date_txt = start_date)
