@@ -189,6 +189,7 @@ class JTN_db:
 		self.cur.execute("INSERT INTO seasons (league) VALUES ('" + str(league_id) + "')")
 		self.commit()
 
+	# start_date, end_date, season_id, league_id
 	def get_season(self, league_id = None, start_year = None, end_year = None, season_id = None):
 		if(end_year == None):
 			end_year = start_year
