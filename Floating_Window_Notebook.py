@@ -108,6 +108,14 @@ class Floating_Window_Notebook:
 		self.parent_box.pack_start(self.export_button, expand = False)
 		self.export_button.connect('clicked', self.export_text)
 
+	def color_format(self, text):
+		if int(text) < 0:
+			return "[COLOR=#dd0000]" + str(text) + "[/COLOR]"
+		else:
+			if int(text) > 0:
+				return "[COLOR=#00dd00]" + str(text) + "[/COLOR]"
+		return str(text)
+
 	### Export the table+models in the format expected by the JuggleTheNumbers website
 	def export_text(self, button):
 		print "Floating Window"
@@ -123,7 +131,7 @@ class Floating_Window_Notebook:
 		print "[table]Team|Prior 1|Current 1|Diff 1|Prior 5|Current 5|Diff 5|Prior 17|Current 17|Diff 17"
 		all_list = self.all_view.get_model()
 		for game in all_list:
-			print "\\",game[0],"|",game[1],"|",game[2],"|",game[3],"|",game[4],"|",game[5],"|",game[6],"|",game[7],"|",game[8],"|",game[9]
+			print "\\",game[0],"|",game[1],"|",game[2],"|",self.color_format(game[3]),"|",game[4],"|",game[5],"|",self.color_format(game[6]),"|",game[7],"|",game[8],"|",self.color_format(game[9])
 		print "[/table]"
 		print ""
 		print ""
@@ -135,7 +143,7 @@ class Floating_Window_Notebook:
 		print "[table]Team|Prior 1|Current 1|Diff 1|Prior 5|Current 5|Diff 5"
 		all_list = self.all_view.get_model()
 		for game in all_list:
-			print "\\",game[0],"|",game[10],"|",game[11],"|",game[12],"|",game[13],"|",game[14],"|",game[15]
+			print "\\",game[0],"|",game[10],"|",game[11],"|",self.color_format(game[12]),"|",game[13],"|",game[14],"|",self.color_format(game[15])
 		print "[/table]"
 
 	### Clear the model table.
