@@ -66,7 +66,22 @@ class Model_Notebook:
 
 	### Export the table+models in the format expected by the JuggleTheNumbers website
 	def export_text(self, button):
-		print "JTN website format no longer needed.  Function remains for potential future export formats."
+		print "Here's my updated rankings table. HFA takes into account the points already earned, and projects the probabilities of each of the remaining games, including home field advantage. EAP is the expected performance of the team over 34 games against average opposition."
+		print ""
+		print "[table]Team|HFA|EAP"
+		season_id = self.get_season_id()
+		export_tuple = []
+                for team in self.JTN_db.get_teams(season_id = season_id):
+			hfa_val = self.fetch_basic(team[1])
+			eap_val = self.fetch_eap(team[1])*len(self.JTN_db.get_all_games(any_team = team[0], season_id = season_id))
+			export_tuple.append([team[3], hfa_val, eap_val])
+
+		export_tuple.sort(lambda x,y: int((x[1] - y[1])*1000), reverse = True)
+
+		for each_line in export_tuple:
+			print "\\" + each_line[0] + "|" + str(round(each_line[1], 1)) + "|" + str(round(each_line[2], 1))
+
+		print "[/table]"
 
 	### Fetch the basic model value for the team specified
 	def fetch_basic(self, name):
