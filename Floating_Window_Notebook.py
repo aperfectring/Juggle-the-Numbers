@@ -195,13 +195,18 @@ class Floating_Window_Notebook:
 		else:
 			start_date = None
 			start_date_txt = None
+		
+		season_id = self.get_season_id()
+		this_season = self.JTN_db.get_season(season_id = season_id)
+		valid_seasons = map(lambda x: x[2], self.JTN_db.get_seasons(league_id = this_season[3]))
 		games_played = self.JTN_db.get_all_games(home_team = team[0], played = "TRUE", start_date = start_date_txt, end_date = end_date.isoformat(), ordered = True)
+		
 		if games:
-			games_trimmed = games_played[:games]
+			games_trimmed = filter(lambda x: x[0] in valid_seasons, games_played)[:games]
 		else:
-			games_trimmed = games_played
+			games_trimmed = filter(lambda x: x[0] in valid_seasons, games_played)
 
 		result = 0.0
 		result += sum(map(lambda x: x[13], games_trimmed))
-		average = int(round(result / len(games_trimmed)))
+		average = int(round(result / len(games_trimmed))) if len(games_trimmed) else 0
 		return average
