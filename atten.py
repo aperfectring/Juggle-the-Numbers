@@ -10,6 +10,7 @@ import Season_Combo
 import Date_Calendar
 import Floating_Window_Notebook
 import Game_Rating_Notebook
+import Total_Attendance_Notebook
 
 class Base:
 	def __init__(self, dbname = None):
@@ -91,6 +92,15 @@ class Base:
 		# the score window needs to be repopulated.
 		self.end_date_cal.register(self.score_note.repop)
 
+		self.total_note_vbox = gtk.VBox(spacing=10)
+		self.total_note_vbox.set_border_width(5)
+		self.notebook.append_page(self.total_note_vbox, gtk.Label("Total"))
+
+		self.total_note = Total_Attendance_Notebook.Total_Attendance_Notebook(self.total_note_vbox, self.JTN_db, self.league_combo.get_id)
+
+		# When the league combo updates,
+		# the total attendance window needs to be updated.
+		self.league_combo.register(self.total_note.repop)
 
 		self.league_combo.repop()
 		self.window.show_all()

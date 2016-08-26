@@ -56,6 +56,8 @@ class Game_Rating_Notebook:
 		print ""
 		print "These numbers are an attempt to assign a rating of how well an individual game's attendance matches up with performance of the league as a whole, and the individual team.  The reference data is the previous year's average and standard deviation, for both the league, and the individual team.  The numbers are the normal distribution's CDF multiplied by 100, and rounded to the nearest whole number.  This means the valid range is from 0 to 100."
 		print ""
+		print "Expansion teams are given -100 for their team score during their first season.  This should be interpreted as \"N/A\", and the league score should be used as a decent comparison metric."
+		print ""
 		print ""
 		print "[table]Date|Team|Attendance|League Score|Team Score"
 		all_list = self.all_view.get_model()
@@ -88,11 +90,16 @@ class Game_Rating_Notebook:
 				team_games = self.JTN_db.get_all_games(season_id = season_id, home_team = game[2])
 				team_games_trim = filter(lambda x: False if x[13] == u'' else True, team_games)
 				team_att = sum(map(lambda x: x[13], team_games_trim))
-				team_avg = float(team_att) / float(len(team_games_trim))
-				team_dev = pow(sum(map(lambda x: pow(float(x[13]) - team_avg, 2), team_games_trim))/float(len(team_games_trim)), 0.5)
+				if len(team_games_trim) == 0:
+					team_avg = 0
+					team_dev = 0
+					team_rating = -100
+				else:
+					team_avg = float(team_att) / float(len(team_games_trim))
+					team_dev = pow(sum(map(lambda x: pow(float(x[13]) - team_avg, 2), team_games_trim))/float(len(team_games_trim)), 0.5)
+					team_rating = self.calc_rating(game[13], team_avg, team_dev)
 
 				league_rating = self.calc_rating(game[13], league_avg, league_dev)
-				team_rating = self.calc_rating(game[13], team_avg, team_dev)
 
 				team = self.JTN_db.get_team(team_id = game[2])
 				all_list.append((game[1], team[1], game[13], league_rating, team_rating))

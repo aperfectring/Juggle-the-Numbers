@@ -514,42 +514,46 @@ class JTN_db:
 		away_games = self.get_all_games(season_id = season_id, played = "TRUE", end_date = date)
 		return sum(map(lambda x: x[6], away_games))
 
-	### Fetch the games played by the team up to and including the specified date
-	def fetch_gp(self, season_id, team, date = None):
+	### Fetch the games played by the team up to and including the specified date, against the specified opponent
+	def fetch_gp(self, season_id, team, date = None, opp = None):
 		if date == None:
 			date_today = datetime.date.today()
 			date = date_today.isoformat()
-		return len(self.get_all_games(season_id = season_id, played = "TRUE", end_date = date, any_team = team))
+		num_gp = len(self.get_all_games(season_id = season_id, played = "TRUE", end_date = date, home_team = team, away_team = opp))
+		num_gp = num_gp + len(self.get_all_games(season_id = season_id, played = "TRUE", end_date = date, away_team = team, home_team = opp))
+		return num_gp
 
-	### Fetch the ties by the team up to and including the specified date
-	def fetch_ties(self, season_id, team, date = None):
+	### Fetch the ties by the team up to and including the specified date, against the specified opponent
+	def fetch_ties(self, season_id, team, date = None, opp = None):
 		if date == None:
 			date_today = datetime.date.today()
 			date = date_today.isoformat()
-		return len(self.get_all_games(season_id = season_id, played = "TRUE", end_date = date, any_team = team, game_tied = "TRUE"))
+		num_ties = len(self.get_all_games(season_id = season_id, played = "TRUE", end_date = date, home_team = team, away_team = opp, game_tied = "TRUE"))
+		num_ties = num_ties + len(self.get_all_games(season_id = season_id, played = "TRUE", end_date = date, away_team = team, home_team = opp, game_tied = "TRUE"))
+		return num_ties
 
-	### Fetch the wins by the team up to and including the specified date
-	def fetch_wins(self, season_id, team, date = None):
+	### Fetch the wins by the team up to and including the specified date, against the specified opponent
+	def fetch_wins(self, season_id, team, date = None, opp = None):
 		if date == None:
 			date_today = datetime.date.today()
 			date = date_today.isoformat()
-		num_wins = len(self.get_all_games(season_id = season_id, played = "TRUE", end_date = date, home_team = team, home_win = "TRUE"))
-		num_wins = num_wins + len(self.get_all_games(season_id = season_id, played = "TRUE", end_date = date, away_team = team, away_win = "TRUE"))
+		num_wins = len(self.get_all_games(season_id = season_id, played = "TRUE", end_date = date, home_team = team, away_team = opp, home_win = "TRUE"))
+		num_wins = num_wins + len(self.get_all_games(season_id = season_id, played = "TRUE", end_date = date, away_team = team, home_team = opp, away_win = "TRUE"))
 		return num_wins
 
-	### Fetch the losses by the team up to and including the specified date
-	def fetch_loss(self, season_id, team, date = None):
+	### Fetch the losses by the team up to and including the specified date, against the specified opponent
+	def fetch_loss(self, season_id, team, date = None, opp = None):
 		if date == None:
 			date_today = datetime.date.today()
 			date = date_today.isoformat()
-		num_loss = len(self.get_all_games(season_id = season_id, played = "TRUE", end_date = date, home_team = team, away_win = "TRUE"))
-		num_loss = num_loss + len(self.get_all_games(season_id = season_id, played = "TRUE", end_date = date, away_team = team, home_win = "TRUE"))
+		num_loss = len(self.get_all_games(season_id = season_id, played = "TRUE", end_date = date, home_team = team, away_team = opp, away_win = "TRUE"))
+		num_loss = num_loss + len(self.get_all_games(season_id = season_id, played = "TRUE", end_date = date, away_team = team, home_team = opp, home_win = "TRUE"))
 		return num_loss
 
-	### Fetch the points earned by the team up to and including the specified date
-	def fetch_pts(self, season_id, team, date = None):
-		num_tied = self.fetch_ties(season_id, team, date)
-		num_won = self.fetch_wins(season_id, team, date)
+	### Fetch the points earned by the team up to and including the specified date, against the specified opponent
+	def fetch_pts(self, season_id, team, date = None, opp = None):
+		num_tied = self.fetch_ties(season_id, team, date, opp)
+		num_won = self.fetch_wins(season_id, team, date, opp)
 		return (3 * num_won + num_tied)
 
 	### Fetch the goals scored by the team up to and including the specified date

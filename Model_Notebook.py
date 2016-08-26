@@ -22,7 +22,8 @@ class Model_Notebook:
 
 		list_store = gtk.ListStore(gobject.TYPE_STRING,		# Team
 						gobject.TYPE_FLOAT,	# Basic
-						gobject.TYPE_FLOAT)	# EAP
+						gobject.TYPE_FLOAT,	# EAP
+						gobject.TYPE_FLOAT)	# RPI
 
 		self.all_view = gtk.TreeView()
 		scrolled_window.add(self.all_view)
@@ -38,6 +39,10 @@ class Model_Notebook:
 
 		column = gtk.TreeViewColumn("EAP", gtk.CellRendererText(), text=2)
 		column.set_sort_column_id(2)
+		self.all_view.append_column(column)
+
+		column = gtk.TreeViewColumn("RPI", gtk.CellRendererText(), text=3)
+		column.set_sort_column_id(3)
 		self.all_view.append_column(column)
 
 		self.calc_thread = threading.Thread(target=self.repop)
@@ -82,6 +87,20 @@ class Model_Notebook:
 			print "\\" + each_line[0] + "|" + str(round(each_line[1], 1)) + "|" + str(round(each_line[2], 1))
 
 		print "[/table]"
+		print ""
+		print ""
+		print "[table]Team|RPI"
+		export_tuple = []
+                for team in self.JTN_db.get_teams(season_id = season_id):
+			rpi_val = self.fetch_rpi(team[1])
+			export_tuple.append([team[3], rpi_val])
+
+		export_tuple.sort(lambda x,y: int((x[1] - y[1])*1000), reverse = True)
+
+		for each_line in export_tuple:
+			print "\\" + each_line[0] + "|" + str(round(each_line[1], 2))
+
+		print "[/table]"
 
 	### Fetch the basic model value for the team specified
 	def fetch_basic(self, name):
@@ -103,6 +122,16 @@ class Model_Notebook:
 			myiter = all_model.iter_next(myiter)
 		return None
 		
+	### Fetch the RPI model value for the team specified
+	def fetch_rpi(self, name):
+		all_model = self.all_view.get_model()
+		myiter = all_model.get_iter_first()
+		while (myiter != None):
+			if(all_model.get(myiter, 0)[0] == name):
+				return all_model.get(myiter, 3)[0]
+			myiter = all_model.iter_next(myiter)
+		return None
+
 
 	### Clear the model table.
 	def clear(self):
@@ -141,6 +170,10 @@ class Model_Notebook:
 		if self.thread_sig.wait(0.01):
 			return
 
+		rpi_ppg = self.rpi_model_calc(self.get_date())
+		if self.thread_sig.wait(0.01):
+			return
+
 
 		gtk.gdk.threads_enter()
 		season_id = self.get_season_id()
@@ -152,7 +185,7 @@ class Model_Notebook:
 			team_list = []
 			map(team_list.append, self.JTN_db.get_teams(season_id = season_id, conf_id = conf_id))
 			team_list.sort()
-			map(lambda x: all_list.append( (x[1], basic_pts[x[0]], eap_ppg[x[0]]) ), team_list)
+			map(lambda x: all_list.append( (x[1], basic_pts[x[0]], eap_ppg[x[0]], rpi_ppg[x[0]]) ), team_list)
 
 		self.calc_progress.set_fraction(1)
 		self.calc_progress.set_text("Calculation Complete")		
@@ -296,3 +329,55 @@ class Model_Notebook:
 			team_ppg[team[0]] = 3.0 * win_chance + tie_chance
 
 		return team_ppg
+
+	### Calculate the RPI model based on the standings at the provided date.
+	def rpi_model_calc(self, date = None):
+		gtk.gdk.threads_enter()
+		season_id = self.get_season_id()
+		gtk.gdk.threads_leave()
+		if date == None:
+			date_today = datetime.date.today()
+			date = date_today.isoformat()
+
+		team_ppg = {}
+		team_oppg = {}
+		team_ooppg = {}
+		team_rpi = {}
+
+		for team in self.JTN_db.get_teams(season_id = season_id):
+			team_ppg[team[0]] = float(self.JTN_db.fetch_pts(season_id, team[0], date)) / float(self.JTN_db.fetch_gp(season_id, team[0], date))
+
+		for team in self.JTN_db.get_teams(season_id = season_id):
+			team_gp = 0
+			team_oppg[team[0]] = 0.0
+			for game in self.JTN_db.get_all_games(season_id = season_id, played = "TRUE", end_date = date, home_team = team[0]):
+				team_gp = team_gp + 1
+				opp_pts = float(self.JTN_db.fetch_pts(season_id, game[5], date)) - float(self.JTN_db.fetch_pts(season_id, game[5], date, team[0]))
+				opp_gp = float(self.JTN_db.fetch_gp(season_id, game[5], date)) - float(self.JTN_db.fetch_gp(season_id, game[5], date, team[0]))
+				if opp_gp > 0:
+					team_oppg[team[0]] = team_oppg[team[0]] + (opp_pts / opp_gp)
+
+			for game in self.JTN_db.get_all_games(season_id = season_id, played = "TRUE", end_date = date, away_team = team[0]):
+				team_gp = team_gp + 1
+				opp_pts = float(self.JTN_db.fetch_pts(season_id, game[2], date)) - float(self.JTN_db.fetch_pts(season_id, game[2], date, team[0]))
+				opp_gp = float(self.JTN_db.fetch_gp(season_id, game[2], date)) - float(self.JTN_db.fetch_gp(season_id, game[2], date, team[0]))
+				if opp_gp > 0:
+					team_oppg[team[0]] = team_oppg[team[0]] + (opp_pts / opp_gp)
+
+			team_oppg[team[0]] = team_oppg[team[0]] / float(team_gp)
+
+		for team in self.JTN_db.get_teams(season_id = season_id):
+			team_gp = 0
+			team_ooppg[team[0]] = 0.0
+			for game in self.JTN_db.get_all_games(season_id = season_id, played = "TRUE", end_date = date, home_team = team[0]):
+				team_gp = team_gp + 1
+				team_ooppg[team[0]] = team_ooppg[team[0]] + team_oppg[game[5]]
+
+			for game in self.JTN_db.get_all_games(season_id = season_id, played = "TRUE", end_date = date, away_team = team[0]):
+				team_gp = team_gp + 1
+				team_ooppg[team[0]] = team_ooppg[team[0]] + team_oppg[game[2]]
+			team_ooppg[team[0]] = team_ooppg[team[0]] / float(team_gp)
+
+		for team in self.JTN_db.get_teams(season_id = season_id):
+			team_rpi[team[0]] = (team_ppg[team[0]] + team_oppg[team[0]] + team_oppg[team[0]] + team_ooppg[team[0]]) / 4.0
+		return team_rpi

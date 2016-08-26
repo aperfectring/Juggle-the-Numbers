@@ -128,10 +128,10 @@ class Floating_Window_Notebook:
 		print "Prior date:",self.get_start_date()
 		print "Current date:", self.get_end_date()
 		print ""
-		print "[table]Team|Prior 1|Current 1|Diff 1|Prior 5|Current 5|Diff 5|Prior 17|Current 17|Diff 17"
+		print "[table]Team|Current 1|Diff 1|Current 17|Diff 17"
 		all_list = self.all_view.get_model()
 		for game in all_list:
-			print "\\",game[0],"|",game[1],"|",game[2],"|",self.color_format(game[3]),"|",game[4],"|",game[5],"|",self.color_format(game[6]),"|",game[7],"|",game[8],"|",self.color_format(game[9])
+			print "\\",game[0],"|",game[2],"|",self.color_format(game[3]),"|",game[8],"|",self.color_format(game[9])
 		print "[/table]"
 		print ""
 		print ""
@@ -140,10 +140,10 @@ class Floating_Window_Notebook:
 		print "Prior date:",self.get_start_date()
 		print "Current date:", self.get_end_date()
 		print ""
-		print "[table]Team|Prior 1|Current 1|Diff 1|Prior 5|Current 5|Diff 5"
+		print "[table]Team|Current 1|Diff 1|Current 5|Diff 5"
 		all_list = self.all_view.get_model()
 		for game in all_list:
-			print "\\",game[0],"|",game[10],"|",game[11],"|",self.color_format(game[12]),"|",game[13],"|",game[14],"|",self.color_format(game[15])
+			print "\\",game[0],"|",game[11],"|",self.color_format(game[12]),"|",game[14],"|",self.color_format(game[15])
 		print "[/table]"
 
 	### Clear the model table.
